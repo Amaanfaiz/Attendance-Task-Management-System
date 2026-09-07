@@ -45,12 +45,28 @@ npm run dev:api    # http://localhost:3001/api/v1  (Swagger at /api/docs)
 npm run dev:web    # http://localhost:3000
 ```
 
-Seeded accounts (change these before any real deployment):
+Seeded accounts, straight out of `npm run prisma:seed` with no overrides (change these
+before any real deployment — see `SEED_ADMIN_PASSWORD`/`SEED_EMPLOYEE_PASSWORD` in
+`prisma/seed.ts`):
 
 | Role | Email | Password |
 |---|---|---|
 | Administrator | `admin@atms.local` | `Admin123!Change` |
 | Employee | `employee@atms.local` | `Employee123!Change` |
+
+## Live temporary demo
+
+**https://complement-estimation-see-matthew.trycloudflare.com**
+
+This is a temporary tunnel to a local dev environment, not the real Azure hosting from
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — it goes down once that session ends. The
+demo passwords below were rotated away from the seed defaults above before exposing it
+publicly, so use these here, not the table above:
+
+| Role | Email | Password |
+|---|---|---|
+| Administrator | `admin@atms.local` | `MqRHfKfm1uj8!Aa1` |
+| Employee | `employee@atms.local` | `yuWsxQgWYhav!Aa1` |
 
 ## Running the full stack in Docker
 
@@ -97,7 +113,7 @@ Employee and Administrator perspectives) is:
 
 - **EP-011 (Notifications/Reminders)** — out of MVP scope per the SRS's own Release Plan
   (§16), not a cut made unilaterally for time.
-- Automated backups and a chosen production hosting target — pending a cloud provider
-  decision (see tracker, US-012-005).
-- Structured/correlation-ID logging (pino) — Nest's built-in logger plus `/health` and
-  `/ready` endpoints are in place; correlation IDs are not yet wired through.
+- Automated backups — the policy and restore procedure are documented (see
+  [`docs/BACKUP_AND_RESTORE.md`](docs/BACKUP_AND_RESTORE.md)), but automation needs a
+  provisioned production database, which is blocked on Azure access (see tracker,
+  US-012-005).
