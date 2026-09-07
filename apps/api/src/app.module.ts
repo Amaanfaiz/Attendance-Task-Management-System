@@ -23,7 +23,19 @@ import { AppController } from './app.controller';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    // In test, config comes entirely from test/setup-env.ts's explicit .env.test load
+    // (already in process.env by the time this module initializes). Without
+    // ignoreEnvFile here, ConfigModule additionally auto-loads the plain `.env` from
+    // cwd regardless of NODE_ENV, and any key present there but *not* in .env.test
+    // leaks straight into the test run — e.g. adding COOKIE_SAME_SITE to a local
+    // dev .env silently forced Secure cookies onto the e2e suite's plain-HTTP test
+    // server, which correctly refuses to send them back, failing every authenticated
+    // test after login with 401. Found via that exact failure.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration],
+      ignoreEnvFile: process.env.NODE_ENV === 'test',
+    }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
     CommonModule,

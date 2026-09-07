@@ -1,0 +1,27 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.next
+**/.next
+coverage
+**/coverage
+
+# Local env files must never leak into a build context — Next.js auto-loads .env at
+# both build and runtime, which would silently override whatever the container's
+# real runtime environment (docker-compose `environment:`, Azure Container App
+# secrets, etc.) provides. .env.example is fine to include; it's not auto-loaded.
+# Unlike .gitignore, a bare pattern here only matches at the build-context ROOT —
+# it needs the explicit **/ prefix to also catch apps/api/.env, apps/web/.env, etc.
+.env
+**/.env
+.env.*
+**/.env.*
+!.env.example
+!**/.env.example
+
+.git
+.gitignore
+.dockerignore
+docs
+*.md

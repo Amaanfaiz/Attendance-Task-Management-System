@@ -12,7 +12,15 @@ FROM deps AS build
 COPY packages/shared packages/shared
 COPY apps/web apps/web
 RUN npm run build -w packages/shared
-ARG NEXT_PUBLIC_API_URL=http://localhost:3001
+# Baked in at build time: Next.js resolves rewrites() destinations once, during
+# `next build`, into the standalone output's routes manifest — a runtime `-e`/
+# `environment:` value has no effect on it (verified: a container started with a
+# different API_INTERNAL_URL than the one set here still proxies to this one).
+# Leave NEXT_PUBLIC_API_URL unset to use the same-origin rewrite proxy (the default,
+# see next.config.mjs) — only set it to make the browser call the API directly.
+ARG API_INTERNAL_URL=http://localhost:3001
+ENV API_INTERNAL_URL=$API_INTERNAL_URL
+ARG NEXT_PUBLIC_API_URL=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build -w apps/web
 

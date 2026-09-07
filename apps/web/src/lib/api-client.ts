@@ -1,4 +1,11 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+// Empty by default: the browser calls the API through a same-origin relative path
+// (/api/v1/...), which Next.js's own server proxies to the real API (see the
+// `rewrites()` config in next.config.mjs). This keeps the auth cookie first-party
+// from the browser's point of view — cross-origin cookies get blocked outright as
+// "third-party cookies" by Safari/Firefox and an opt-in Chrome setting, independent
+// of the SameSite attribute. Set NEXT_PUBLIC_API_URL only if you deliberately want
+// the browser to call the API's own origin directly instead of proxying.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 export class ApiError extends Error {
   constructor(
@@ -43,13 +50,14 @@ export interface RequestOptions {
 }
 
 function buildUrl(path: string, query?: RequestOptions['query']) {
-  const url = new URL(`${API_URL}/api/v1${path}`);
+  const qs = new URLSearchParams();
   if (query) {
     for (const [key, value] of Object.entries(query)) {
-      if (value !== undefined) url.searchParams.set(key, String(value));
+      if (value !== undefined) qs.set(key, String(value));
     }
   }
-  return url.toString();
+  const qsString = qs.toString();
+  return `${API_URL}/api/v1${path}${qsString ? `?${qsString}` : ''}`;
 }
 
 export async function apiRequest<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {

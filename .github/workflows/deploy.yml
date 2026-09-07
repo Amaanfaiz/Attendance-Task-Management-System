@@ -49,9 +49,27 @@ jobs:
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/atms-api:${{ steps.tag.outputs.tag }}
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/atms-api:latest
 
+      # Next.js bakes rewrites() destinations into the build at `next build` time —
+      # a runtime Container App env var has no effect on it (verified locally: a
+      # container started with a different API_INTERNAL_URL than its build-time
+      # value still proxies to the build-time one). The api Container App already
+      # exists from the infra deployment (DEPLOYMENT.md step 3), so its FQDN is
+      # queryable here and gets baked into the web image as the proxy target.
+      - name: Look up the API Container App's public FQDN
+        id: api-fqdn
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            fqdn=$(az containerapp show \
+              --name atms-api \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --query properties.configuration.ingress.fqdn -o tsv)
+            echo "url=https://$fqdn" >> "$GITHUB_OUTPUT"
+
       - name: Build and push web image
         run: |
           docker build -f apps/web/Dockerfile \
+            --build-arg API_INTERNAL_URL=${{ steps.api-fqdn.outputs.url }} \
             -t ${{ secrets.ACR_NAME }}.azurecr.io/atms-web:${{ steps.tag.outputs.tag }} \
             -t ${{ secrets.ACR_NAME }}.azurecr.io/atms-web:latest .
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/atms-web:${{ steps.tag.outputs.tag }}
@@ -82,3 +100,22 @@ jobs:
               --name atms-web \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --image ${{ secrets.ACR_NAME }}.azurecr.io/atms-web:${{ needs.build-and-push.outputs.image-tag }}
+
+      # WEB_ORIGIN (used for CORS + the auth cookie's allowed origin) is a plain
+      # runtime env var on the API side, unlike the web image's build-time proxy
+      # target above — CORS is checked per-request, not baked in. Both apps' real
+      # FQDNs are only known after the first `az deployment group create`, so this
+      # keeps the api container's CORS allow-list correct even if the `webOrigin`
+      # Bicep parameter was a best guess at initial infra deploy time.
+      - name: Sync WEB_ORIGIN to the web Container App's actual FQDN
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            web_fqdn=$(az containerapp show \
+              --name atms-web \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --query properties.configuration.ingress.fqdn -o tsv)
+            az containerapp update \
+              --name atms-api \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --set-env-vars WEB_ORIGIN="https://$web_fqdn"
