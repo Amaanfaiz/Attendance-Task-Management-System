@@ -346,6 +346,104 @@ describe('Attendance & Task Management (e2e)', () => {
     });
   });
 
+  describe('Multiple breaks in one day (US-004-003)', () => {
+    it('records each break as a separate, non-overlapping record and totals them correctly', async () => {
+      const agent = request.agent(httpServer);
+      const email = 'e2e-multibreak@atms.local';
+      const hash = await argon2.hash('MultiBreak123', {
+        type: argon2.argon2id,
+      });
+      await prisma.user.create({
+        data: {
+          firstName: 'Multi',
+          surname: 'Break',
+          email,
+          phoneNumber: '0000000005',
+          passwordHash: hash,
+          role: 'EMPLOYEE',
+          status: 'ACTIVE',
+        },
+      });
+      await agent
+        .post('/api/v1/auth/login')
+        .send({ email, password: 'MultiBreak123' });
+
+      await agent.post('/api/v1/attendance/clock-in');
+
+      const break1Start = await agent.post('/api/v1/breaks/start');
+      expect(break1Start.status).toBe(200);
+      await new Promise((r) => setTimeout(r, 20));
+      const break1End = await agent.post('/api/v1/breaks/end');
+      expect(break1End.status).toBe(200);
+
+      const break2Start = await agent.post('/api/v1/breaks/start');
+      expect(break2Start.status).toBe(200);
+      await new Promise((r) => setTimeout(r, 20));
+      const break2End = await agent.post('/api/v1/breaks/end');
+      expect(break2End.status).toBe(200);
+
+      // Each break must be its own record, linked to the same attendance session,
+      // and not overlap the other (AC-004-003-01/02/04).
+      expect(break1End.body.id).not.toBe(break2End.body.id);
+      expect(break1End.body.attendanceSessionId).toBe(
+        break2End.body.attendanceSessionId,
+      );
+      expect(new Date(break1End.body.endAt).getTime()).toBeLessThanOrEqual(
+        new Date(break2Start.body.breakRecord.startAt).getTime(),
+      );
+
+      const state = await agent.get('/api/v1/attendance/state');
+      expect(state.body.state).toBe('WORKING');
+    });
+  });
+
+  describe('Session inactivity timeout (US-001-007, AC-001-007-01/02)', () => {
+    it('a refresh token unused past the inactivity window is treated as expired', async () => {
+      const agent = request.agent(httpServer);
+      const email = 'e2e-inactivity@atms.local';
+      const hash = await argon2.hash('Inactivity123', {
+        type: argon2.argon2id,
+      });
+      await prisma.user.create({
+        data: {
+          firstName: 'Inactive',
+          surname: 'Session',
+          email,
+          phoneNumber: '0000000006',
+          passwordHash: hash,
+          role: 'EMPLOYEE',
+          status: 'ACTIVE',
+        },
+      });
+      await agent
+        .post('/api/v1/auth/login')
+        .send({ email, password: 'Inactivity123' });
+
+      // Confirm the session is valid before manufacturing the inactivity gap.
+      const before = await agent.post('/api/v1/auth/refresh');
+      expect(before.status).toBe(200);
+
+      const settings = await prisma.appSettings.upsert({
+        where: { id: 'default' },
+        create: { id: 'default' },
+        update: {},
+      });
+      const staleTime = new Date(
+        Date.now() - (settings.sessionInactivityTimeoutMinutes + 1) * 60_000,
+      );
+      await prisma.refreshToken.updateMany({
+        where: {
+          userId: (await prisma.user.findUniqueOrThrow({ where: { email } }))
+            .id,
+        },
+        data: { lastUsedAt: staleTime },
+      });
+
+      const afterInactivity = await agent.post('/api/v1/auth/refresh');
+      expect(afterInactivity.status).toBe(401);
+    });
+  });
+
   describe('Logout invalidates the session (US-001-004)', () => {
     it('protected endpoints are unreachable after logout', async () => {
       const logoutAgent = request.agent(httpServer);
