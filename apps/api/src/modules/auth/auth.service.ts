@@ -33,7 +33,9 @@ export class AuthService {
   ) {}
 
   async register(input: RegisterInput) {
-    const existing = await this.prisma.user.findUnique({ where: { email: input.email } });
+    const existing = await this.prisma.user.findUnique({
+      where: { email: input.email },
+    });
     if (existing) {
       throw new ConflictException('An account with this email already exists');
     }
@@ -44,8 +46,12 @@ export class AuthService {
       update: {},
     });
 
-    const passwordHash = await argon2.hash(input.password, { type: argon2.argon2id });
-    const status = settings.requireRegistrationApproval ? UserStatus.PENDING : UserStatus.ACTIVE;
+    const passwordHash = await argon2.hash(input.password, {
+      type: argon2.argon2id,
+    });
+    const status = settings.requireRegistrationApproval
+      ? UserStatus.PENDING
+      : UserStatus.ACTIVE;
 
     const user = await this.prisma.user.create({
       data: {
@@ -71,7 +77,9 @@ export class AuthService {
   }
 
   async validateCredentials(input: LoginInput) {
-    const user = await this.prisma.user.findUnique({ where: { email: input.email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: input.email },
+    });
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -80,13 +88,25 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
     if (user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException(`Account is ${user.status.toLowerCase()}`);
+      throw new UnauthorizedException(
+        `Account is ${user.status.toLowerCase()}`,
+      );
     }
     return user;
   }
 
-  async issueSessionTokens(userId: string, email: string, role: string, status: string) {
-    const accessToken = this.tokens.signAccessToken({ sub: userId, email, role, status });
+  async issueSessionTokens(
+    userId: string,
+    email: string,
+    role: string,
+    status: string,
+  ) {
+    const accessToken = this.tokens.signAccessToken({
+      sub: userId,
+      email,
+      role,
+      status,
+    });
     const refreshToken = await this.tokens.issueRefreshToken(userId);
     return { accessToken, refreshToken };
   }
@@ -96,11 +116,16 @@ export class AuthService {
     if (!verified) {
       throw new UnauthorizedException('Session expired, please log in again');
     }
-    const user = await this.prisma.user.findUnique({ where: { id: verified.userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: verified.userId },
+    });
     if (!user || user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException('Session expired, please log in again');
     }
-    const newRefreshToken = await this.tokens.rotateRefreshToken(refreshToken, user.id);
+    const newRefreshToken = await this.tokens.rotateRefreshToken(
+      refreshToken,
+      user.id,
+    );
     const accessToken = this.tokens.signAccessToken({
       sub: user.id,
       email: user.email,
@@ -123,30 +148,45 @@ export class AuthService {
     const token = randomBytes(32).toString('hex');
     const tokenHash = createHash('sha256').update(token).digest('hex');
     await this.prisma.passwordResetToken.create({
-      data: { userId, tokenHash, expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS) },
+      data: {
+        userId,
+        tokenHash,
+        expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+      },
     });
     this.logger.log(`Password set/reset link for ${email}: token=${token}`);
   }
 
   // AC-001-005-02: response never reveals whether the account exists.
   async forgotPassword(input: ForgotPasswordInput) {
-    const user = await this.prisma.user.findUnique({ where: { email: input.email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: input.email },
+    });
     if (user) {
       await this.createPasswordResetToken(user.id, user.email);
     }
-    return { message: 'If that email is registered, a reset link has been sent.' };
+    return {
+      message: 'If that email is registered, a reset link has been sent.',
+    };
   }
 
   async resetPassword(input: ResetPasswordInput) {
     const tokenHash = createHash('sha256').update(input.token).digest('hex');
-    const record = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+    const record = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+    });
     if (!record || record.usedAt || record.expiresAt < new Date()) {
       throw new BadRequestException('Reset link is invalid or has expired');
     }
 
-    const passwordHash = await argon2.hash(input.password, { type: argon2.argon2id });
+    const passwordHash = await argon2.hash(input.password, {
+      type: argon2.argon2id,
+    });
     await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id: record.userId }, data: { passwordHash } }),
+      this.prisma.user.update({
+        where: { id: record.userId },
+        data: { passwordHash },
+      }),
       this.prisma.passwordResetToken.update({
         where: { id: record.id },
         data: { usedAt: new Date() },

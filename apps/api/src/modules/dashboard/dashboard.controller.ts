@@ -19,20 +19,32 @@ export class DashboardController {
 
   @Get('kpis')
   async kpis() {
-    const [totalActiveUsers, working, onBreak, runningTimers, tasksByStatusRaw, overdueCount] =
-      await Promise.all([
-        this.prisma.user.count({ where: { status: UserStatus.ACTIVE } }),
-        this.prisma.attendanceSession.count({ where: { status: AttendanceSessionStatus.ACTIVE } }),
-        this.prisma.attendanceSession.count({ where: { status: AttendanceSessionStatus.ON_BREAK } }),
-        this.prisma.taskTimeEntry.count({ where: { status: TaskTimeEntryStatus.RUNNING } }),
-        this.prisma.task.groupBy({ by: ['status'], _count: { _all: true } }),
-        this.prisma.task.count({
-          where: {
-            dueDate: { lt: new Date() },
-            status: { notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED] },
-          },
-        }),
-      ]);
+    const [
+      totalActiveUsers,
+      working,
+      onBreak,
+      runningTimers,
+      tasksByStatusRaw,
+      overdueCount,
+    ] = await Promise.all([
+      this.prisma.user.count({ where: { status: UserStatus.ACTIVE } }),
+      this.prisma.attendanceSession.count({
+        where: { status: AttendanceSessionStatus.ACTIVE },
+      }),
+      this.prisma.attendanceSession.count({
+        where: { status: AttendanceSessionStatus.ON_BREAK },
+      }),
+      this.prisma.taskTimeEntry.count({
+        where: { status: TaskTimeEntryStatus.RUNNING },
+      }),
+      this.prisma.task.groupBy({ by: ['status'], _count: { _all: true } }),
+      this.prisma.task.count({
+        where: {
+          dueDate: { lt: new Date() },
+          status: { notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED] },
+        },
+      }),
+    ]);
 
     const notClockedIn = Math.max(0, totalActiveUsers - working - onBreak);
     const tasksByStatus = Object.fromEntries(

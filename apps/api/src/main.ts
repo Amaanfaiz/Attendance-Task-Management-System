@@ -19,7 +19,9 @@ async function bootstrap() {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Attendance & Task Management API')
-    .setDescription('NFR-015: generated OpenAPI documentation for supported APIs')
+    .setDescription(
+      'NFR-015: generated OpenAPI documentation for supported APIs',
+    )
     .setVersion('1.0')
     .addCookieAuth('atms_access')
     .build();
@@ -29,6 +31,8 @@ async function bootstrap() {
   const port = config.get<number>('port') ?? 3001;
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`API listening on http://localhost:${port}/api/v1 (docs at /api/docs)`);
+  console.log(
+    `API listening on http://localhost:${port}/api/v1 (docs at /api/docs)`,
+  );
 }
 bootstrap();

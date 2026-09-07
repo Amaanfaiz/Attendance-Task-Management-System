@@ -1,6 +1,10 @@
 import { Body, Controller, Get, Post, UsePipes } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { CreateDepartmentInput, UserRole, createDepartmentSchema } from '@atms/shared';
+import {
+  CreateDepartmentInput,
+  UserRole,
+  createDepartmentSchema,
+} from '@atms/shared';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { PrismaService } from '../../prisma/prisma.service';

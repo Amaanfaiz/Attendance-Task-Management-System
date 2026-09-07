@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 import {
@@ -64,7 +69,12 @@ export class UsersService {
     return user;
   }
 
-  async list(filters: { status?: string; role?: string; departmentId?: string; search?: string }) {
+  async list(filters: {
+    status?: string;
+    role?: string;
+    departmentId?: string;
+    search?: string;
+  }) {
     return this.prisma.user.findMany({
       where: {
         status: filters.status as never,
@@ -73,7 +83,9 @@ export class UsersService {
         ...(filters.search
           ? {
               OR: [
-                { firstName: { contains: filters.search, mode: 'insensitive' } },
+                {
+                  firstName: { contains: filters.search, mode: 'insensitive' },
+                },
                 { surname: { contains: filters.search, mode: 'insensitive' } },
                 { email: { contains: filters.search, mode: 'insensitive' } },
               ],
@@ -88,12 +100,18 @@ export class UsersService {
   // US-002-001: administrator onboards a user directly; a set-password link replaces a
   // plaintext temp password so no secret ever passes through the admin's hands.
   async adminCreate(actorId: string, input: AdminCreateUserInput) {
-    const existing = await this.prisma.user.findUnique({ where: { email: input.email } });
-    if (existing) throw new ConflictException('An account with this email already exists');
-
-    const placeholderPasswordHash = await argon2.hash(randomBytes(32).toString('hex'), {
-      type: argon2.argon2id,
+    const existing = await this.prisma.user.findUnique({
+      where: { email: input.email },
     });
+    if (existing)
+      throw new ConflictException('An account with this email already exists');
+
+    const placeholderPasswordHash = await argon2.hash(
+      randomBytes(32).toString('hex'),
+      {
+        type: argon2.argon2id,
+      },
+    );
 
     const user = await this.prisma.user.create({
       data: {
@@ -123,12 +141,18 @@ export class UsersService {
     return user;
   }
 
-  async adminUpdate(actorId: string, userId: string, input: AdminUpdateUserInput) {
+  async adminUpdate(
+    actorId: string,
+    userId: string,
+    input: AdminUpdateUserInput,
+  ) {
     const before = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!before) throw new NotFoundException('User not found');
 
     if (input.email && input.email !== before.email) {
-      const existing = await this.prisma.user.findUnique({ where: { email: input.email } });
+      const existing = await this.prisma.user.findUnique({
+        where: { email: input.email },
+      });
       if (existing) throw new ConflictException('Email already in use');
     }
 
@@ -163,7 +187,11 @@ export class UsersService {
       action: AuditAction.USER_UPDATED,
       targetType: 'User',
       targetId: userId,
-      before: { firstName: before.firstName, surname: before.surname, phoneNumber: before.phoneNumber },
+      before: {
+        firstName: before.firstName,
+        surname: before.surname,
+        phoneNumber: before.phoneNumber,
+      },
       after: input,
     });
 
@@ -179,7 +207,11 @@ export class UsersService {
     }
     const updated = await this.prisma.user.update({
       where: { id: userId },
-      data: { status: UserStatus.ACTIVE, approvedById: actorId, approvedAt: new Date() },
+      data: {
+        status: UserStatus.ACTIVE,
+        approvedById: actorId,
+        approvedAt: new Date(),
+      },
       select: SELECT_SAFE_FIELDS,
     });
     await this.audit.record({

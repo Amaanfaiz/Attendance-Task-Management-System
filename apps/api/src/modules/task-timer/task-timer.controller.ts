@@ -18,7 +18,8 @@ export class TaskTimerController {
   @Post('start')
   start(
     @CurrentUser('id') userId: string,
-    @Body(new ZodValidationPipe(startTaskTimerSchema)) body: StartTaskTimerInput,
+    @Body(new ZodValidationPipe(startTaskTimerSchema))
+    body: StartTaskTimerInput,
   ) {
     return this.taskTimerService.start(userId, body.taskId);
   }
@@ -26,7 +27,8 @@ export class TaskTimerController {
   @Post('resume')
   resume(
     @CurrentUser('id') userId: string,
-    @Body(new ZodValidationPipe(startTaskTimerSchema)) body: StartTaskTimerInput,
+    @Body(new ZodValidationPipe(startTaskTimerSchema))
+    body: StartTaskTimerInput,
   ) {
     return this.taskTimerService.resume(userId, body.taskId);
   }
@@ -53,6 +55,9 @@ export class TaskTimerController {
 
   @Get('daily-log')
   dailyLog(@CurrentUser('id') userId: string, @Query('date') date?: string) {
-    return this.taskTimerService.getDailyLog(userId, date ?? new Date().toISOString());
+    return this.taskTimerService.getDailyLog(
+      userId,
+      date ?? new Date().toISOString(),
+    );
   }
 }

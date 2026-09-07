@@ -1,8 +1,19 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@atms/shared';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  AuthenticatedUser,
+} from '../../common/decorators/current-user.decorator';
 import { AttendanceService } from './attendance.service';
 
 @ApiTags('attendance')
@@ -23,7 +34,10 @@ export class AttendanceController {
 
   @Post('clock-out')
   @HttpCode(200)
-  clockOut(@CurrentUser('id') userId: string, @Body('confirm') confirm?: boolean) {
+  clockOut(
+    @CurrentUser('id') userId: string,
+    @Body('confirm') confirm?: boolean,
+  ) {
     return this.attendanceService.clockOut(userId, Boolean(confirm));
   }
 
@@ -38,7 +52,11 @@ export class AttendanceController {
 
   @Get(':id')
   getDetail(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.attendanceService.getSessionDetail(user.id, id, user.role === UserRole.ADMINISTRATOR);
+    return this.attendanceService.getSessionDetail(
+      user.id,
+      id,
+      user.role === UserRole.ADMINISTRATOR,
+    );
   }
 
   @Roles(UserRole.ADMINISTRATOR)

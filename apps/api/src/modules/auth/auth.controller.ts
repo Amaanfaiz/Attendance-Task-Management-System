@@ -23,10 +23,17 @@ import {
   ResetPasswordInput,
 } from '@atms/shared';
 import { Public } from '../../common/decorators/public.decorator';
-import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  AuthenticatedUser,
+} from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AuthService } from './auth.service';
-import { REFRESH_COOKIE, clearAuthCookies, setAuthCookies } from './cookie.util';
+import {
+  REFRESH_COOKIE,
+  clearAuthCookies,
+  setAuthCookies,
+} from './cookie.util';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -48,22 +55,34 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   @UsePipes(new ZodValidationPipe(loginSchema))
-  async login(@Body() body: LoginInput, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() body: LoginInput,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const user = await this.authService.validateCredentials(body);
-    const { accessToken, refreshToken } = await this.authService.issueSessionTokens(
-      user.id,
-      user.email,
-      user.role,
-      user.status,
-    );
+    const { accessToken, refreshToken } =
+      await this.authService.issueSessionTokens(
+        user.id,
+        user.email,
+        user.role,
+        user.status,
+      );
     setAuthCookies(res, this.config, accessToken, refreshToken);
-    return { id: user.id, email: user.email, role: user.role, status: user.status };
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    };
   }
 
   @Public()
   @Post('refresh')
   @HttpCode(200)
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const token = req.cookies?.[REFRESH_COOKIE];
     const { accessToken, refreshToken } = await this.authService.refresh(token);
     setAuthCookies(res, this.config, accessToken, refreshToken);

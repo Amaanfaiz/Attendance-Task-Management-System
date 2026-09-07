@@ -1,5 +1,13 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import { AttendanceSessionStatus, BreakRecordStatus, TaskTimeEntryStatus } from '@atms/shared';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
+import {
+  AttendanceSessionStatus,
+  BreakRecordStatus,
+  TaskTimeEntryStatus,
+} from '@atms/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -13,7 +21,9 @@ export class BreaksService {
       where: { userId, status: AttendanceSessionStatus.ACTIVE },
     });
     if (!session) {
-      throw new BadRequestException('You must be clocked in (and not already on break) to start a break');
+      throw new BadRequestException(
+        'You must be clocked in (and not already on break) to start a break',
+      );
     }
 
     const now = new Date();
@@ -25,7 +35,11 @@ export class BreaksService {
     try {
       const [breakRecord] = await this.prisma.$transaction([
         this.prisma.breakRecord.create({
-          data: { attendanceSessionId: session.id, startAt: now, status: BreakRecordStatus.ACTIVE },
+          data: {
+            attendanceSessionId: session.id,
+            startAt: now,
+            status: BreakRecordStatus.ACTIVE,
+          },
         }),
         this.prisma.attendanceSession.update({
           where: { id: session.id },
@@ -58,7 +72,10 @@ export class BreaksService {
       throw new BadRequestException('You do not have an active break');
     }
     const activeBreak = await this.prisma.breakRecord.findFirst({
-      where: { attendanceSessionId: session.id, status: BreakRecordStatus.ACTIVE },
+      where: {
+        attendanceSessionId: session.id,
+        status: BreakRecordStatus.ACTIVE,
+      },
     });
     if (!activeBreak) {
       throw new BadRequestException('You do not have an active break');

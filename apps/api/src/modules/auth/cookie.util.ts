@@ -29,7 +29,12 @@ export function setAuthCookies(
 
 export function clearAuthCookies(res: Response, config: ConfigService) {
   const secure = config.get<boolean>('cookieSecure');
-  res.clearCookie(ACCESS_COOKIE, { httpOnly: true, secure, sameSite: 'lax', path: '/' });
+  res.clearCookie(ACCESS_COOKIE, {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    path: '/',
+  });
   res.clearCookie(REFRESH_COOKIE, {
     httpOnly: true,
     secure,

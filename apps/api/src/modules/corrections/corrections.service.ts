@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   AuditAction,
   CorrectionStatus,
@@ -16,12 +21,22 @@ export class CorrectionsService {
     private readonly audit: AuditService,
   ) {}
 
-  private async getTargetOwnerAndInterval(targetType: CorrectionTargetType, targetId: string) {
+  private async getTargetOwnerAndInterval(
+    targetType: CorrectionTargetType,
+    targetId: string,
+  ) {
     switch (targetType) {
       case CorrectionTargetType.ATTENDANCE_SESSION: {
-        const record = await this.prisma.attendanceSession.findUnique({ where: { id: targetId } });
-        if (!record) throw new NotFoundException('Attendance session not found');
-        return { userId: record.userId, start: record.clockInAt, end: record.clockOutAt };
+        const record = await this.prisma.attendanceSession.findUnique({
+          where: { id: targetId },
+        });
+        if (!record)
+          throw new NotFoundException('Attendance session not found');
+        return {
+          userId: record.userId,
+          start: record.clockInAt,
+          end: record.clockOutAt,
+        };
       }
       case CorrectionTargetType.BREAK_RECORD: {
         const record = await this.prisma.breakRecord.findUnique({
@@ -29,12 +44,22 @@ export class CorrectionsService {
           include: { attendanceSession: true },
         });
         if (!record) throw new NotFoundException('Break record not found');
-        return { userId: record.attendanceSession.userId, start: record.startAt, end: record.endAt };
+        return {
+          userId: record.attendanceSession.userId,
+          start: record.startAt,
+          end: record.endAt,
+        };
       }
       case CorrectionTargetType.TASK_TIME_ENTRY: {
-        const record = await this.prisma.taskTimeEntry.findUnique({ where: { id: targetId } });
+        const record = await this.prisma.taskTimeEntry.findUnique({
+          where: { id: targetId },
+        });
         if (!record) throw new NotFoundException('Task time entry not found');
-        return { userId: record.userId, start: record.startAt, end: record.endAt };
+        return {
+          userId: record.userId,
+          start: record.startAt,
+          end: record.endAt,
+        };
       }
     }
   }
@@ -56,7 +81,9 @@ export class CorrectionsService {
       },
     });
     if (overlapping) {
-      throw new BadRequestException('Proposed times overlap another recorded task time entry');
+      throw new BadRequestException(
+        'Proposed times overlap another recorded task time entry',
+      );
     }
   }
 
@@ -92,15 +119,21 @@ export class CorrectionsService {
       input.targetId,
     );
     if (target.userId !== userId) {
-      throw new ForbiddenException('You can only request corrections on your own records');
+      throw new ForbiddenException(
+        'You can only request corrections on your own records',
+      );
     }
     const request = await this.prisma.correctionRequest.create({
       data: {
         requestedById: userId,
         targetType: input.targetType as CorrectionTargetType,
         targetId: input.targetId,
-        proposedStart: input.proposedStart ? new Date(input.proposedStart) : undefined,
-        proposedEnd: input.proposedEnd ? new Date(input.proposedEnd) : undefined,
+        proposedStart: input.proposedStart
+          ? new Date(input.proposedStart)
+          : undefined,
+        proposedEnd: input.proposedEnd
+          ? new Date(input.proposedEnd)
+          : undefined,
         reason: input.reason,
         status: CorrectionStatus.PENDING,
       },
@@ -118,7 +151,9 @@ export class CorrectionsService {
   async listPending() {
     return this.prisma.correctionRequest.findMany({
       where: { status: CorrectionStatus.PENDING },
-      include: { requestedBy: { select: { id: true, firstName: true, surname: true } } },
+      include: {
+        requestedBy: { select: { id: true, firstName: true, surname: true } },
+      },
       orderBy: { createdAt: 'asc' },
     });
   }
@@ -132,8 +167,14 @@ export class CorrectionsService {
 
   // AC-009-002-01..04: admin sees original/proposed/reason; approval preserves original
   // via the audit before/after, rejection just records the decision.
-  async decide(actorId: string, correctionId: string, input: DecideCorrectionInput) {
-    const request = await this.prisma.correctionRequest.findUnique({ where: { id: correctionId } });
+  async decide(
+    actorId: string,
+    correctionId: string,
+    input: DecideCorrectionInput,
+  ) {
+    const request = await this.prisma.correctionRequest.findUnique({
+      where: { id: correctionId },
+    });
     if (!request) throw new NotFoundException('Correction request not found');
     if (request.status !== CorrectionStatus.PENDING) {
       throw new BadRequestException('This correction has already been decided');
@@ -212,8 +253,12 @@ export class CorrectionsService {
       input.targetType as CorrectionTargetType,
       input.targetId,
     );
-    const proposedStart = input.proposedStart ? new Date(input.proposedStart) : before.start;
-    const proposedEnd = input.proposedEnd ? new Date(input.proposedEnd) : (before.end ?? undefined);
+    const proposedStart = input.proposedStart
+      ? new Date(input.proposedStart)
+      : before.start;
+    const proposedEnd = input.proposedEnd
+      ? new Date(input.proposedEnd)
+      : (before.end ?? undefined);
 
     if (proposedStart && proposedEnd) {
       await this.assertNoOverlap(
@@ -225,7 +270,12 @@ export class CorrectionsService {
       );
     }
 
-    await this.applyCorrection(input.targetType as CorrectionTargetType, input.targetId, proposedStart, proposedEnd);
+    await this.applyCorrection(
+      input.targetType as CorrectionTargetType,
+      input.targetId,
+      proposedStart,
+      proposedEnd,
+    );
 
     const record = await this.prisma.correctionRequest.create({
       data: {

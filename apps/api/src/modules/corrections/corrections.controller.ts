@@ -8,7 +8,10 @@ import {
   requestCorrectionSchema,
 } from '@atms/shared';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  AuthenticatedUser,
+} from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CorrectionsService } from './corrections.service';
 
@@ -20,7 +23,8 @@ export class CorrectionsController {
   @Post()
   request(
     @CurrentUser('id') userId: string,
-    @Body(new ZodValidationPipe(requestCorrectionSchema)) body: RequestCorrectionInput,
+    @Body(new ZodValidationPipe(requestCorrectionSchema))
+    body: RequestCorrectionInput,
   ) {
     return this.correctionsService.request(userId, body);
   }
@@ -41,7 +45,8 @@ export class CorrectionsController {
   decide(
     @CurrentUser() actor: AuthenticatedUser,
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(decideCorrectionSchema)) body: DecideCorrectionInput,
+    @Body(new ZodValidationPipe(decideCorrectionSchema))
+    body: DecideCorrectionInput,
   ) {
     return this.correctionsService.decide(actor.id, id, body);
   }
@@ -50,7 +55,8 @@ export class CorrectionsController {
   @Post('direct')
   directCorrection(
     @CurrentUser('id') actorId: string,
-    @Body(new ZodValidationPipe(requestCorrectionSchema)) body: RequestCorrectionInput,
+    @Body(new ZodValidationPipe(requestCorrectionSchema))
+    body: RequestCorrectionInput,
   ) {
     return this.correctionsService.adminDirectCorrection(actorId, body);
   }

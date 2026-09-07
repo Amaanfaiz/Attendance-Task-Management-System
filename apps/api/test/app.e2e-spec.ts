@@ -35,17 +35,31 @@ describe('Attendance & Task Management (e2e)', () => {
 
     // Isolated test database — safe to wipe between full test runs.
     await prisma.$executeRawUnsafe('TRUNCATE TABLE "audit_logs" CASCADE');
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE "correction_requests" CASCADE');
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE "task_time_entries" CASCADE');
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "correction_requests" CASCADE',
+    );
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "task_time_entries" CASCADE',
+    );
     await prisma.$executeRawUnsafe('TRUNCATE TABLE "tasks" CASCADE');
     await prisma.$executeRawUnsafe('TRUNCATE TABLE "break_records" CASCADE');
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE "attendance_sessions" CASCADE');
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "attendance_sessions" CASCADE',
+    );
     await prisma.$executeRawUnsafe('TRUNCATE TABLE "refresh_tokens" CASCADE');
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE "password_reset_tokens" CASCADE');
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "password_reset_tokens" CASCADE',
+    );
     await prisma.$executeRawUnsafe('TRUNCATE TABLE "users" CASCADE');
-    await prisma.appSettings.upsert({ where: { id: 'default' }, create: { id: 'default' }, update: {} });
+    await prisma.appSettings.upsert({
+      where: { id: 'default' },
+      create: { id: 'default' },
+      update: {},
+    });
 
-    const adminHash = await argon2.hash(adminPassword, { type: argon2.argon2id });
+    const adminHash = await argon2.hash(adminPassword, {
+      type: argon2.argon2id,
+    });
     await prisma.user.create({
       data: {
         firstName: 'E2E',
@@ -103,10 +117,14 @@ describe('Attendance & Task Management (e2e)', () => {
         .send({ email: adminEmail, password: adminPassword });
       expect(login.status).toBe(200);
 
-      const pending = await adminAgent.get('/api/v1/users').query({ status: 'PENDING' });
+      const pending = await adminAgent
+        .get('/api/v1/users')
+        .query({ status: 'PENDING' });
       expect(pending.body).toHaveLength(1);
 
-      const approve = await adminAgent.post(`/api/v1/users/${pending.body[0].id}/approve`);
+      const approve = await adminAgent.post(
+        `/api/v1/users/${pending.body[0].id}/approve`,
+      );
       expect(approve.status).toBe(201);
       expect(approve.body.status).toBe('ACTIVE');
     });
@@ -160,13 +178,17 @@ describe('Attendance & Task Management (e2e)', () => {
     });
 
     it('starts a task timer', async () => {
-      const res = await employeeAgent.post('/api/v1/task-timers/start').send({ taskId });
+      const res = await employeeAgent
+        .post('/api/v1/task-timers/start')
+        .send({ taskId });
       expect(res.status).toBe(201);
       expect(res.body.status).toBe('RUNNING');
     });
 
     it('rejects a second concurrent task timer (BR-003)', async () => {
-      const res = await employeeAgent.post('/api/v1/task-timers/start').send({ taskId });
+      const res = await employeeAgent
+        .post('/api/v1/task-timers/start')
+        .send({ taskId });
       expect(res.status).toBe(409);
     });
 
@@ -181,7 +203,9 @@ describe('Attendance & Task Management (e2e)', () => {
     });
 
     it('cannot start a task timer while on break', async () => {
-      const res = await employeeAgent.post('/api/v1/task-timers/start').send({ taskId });
+      const res = await employeeAgent
+        .post('/api/v1/task-timers/start')
+        .send({ taskId });
       expect(res.status).toBe(400);
     });
 
@@ -195,20 +219,26 @@ describe('Attendance & Task Management (e2e)', () => {
     });
 
     it('resumes the task after the break', async () => {
-      const res = await employeeAgent.post('/api/v1/task-timers/resume').send({ taskId });
+      const res = await employeeAgent
+        .post('/api/v1/task-timers/resume')
+        .send({ taskId });
       expect(res.status).toBe(201);
       expect(res.body.status).toBe('RUNNING');
     });
 
     it('clock-out requires confirmation while a task timer is running (BR-007)', async () => {
-      const res = await employeeAgent.post('/api/v1/attendance/clock-out').send({});
+      const res = await employeeAgent
+        .post('/api/v1/attendance/clock-out')
+        .send({});
       expect(res.status).toBe(200);
       expect(res.body.requiresConfirmation).toBe(true);
       expect(res.body.activeTimer).toBeTruthy();
     });
 
     it('confirmed clock-out stops the timer and completes the session at one boundary', async () => {
-      const res = await employeeAgent.post('/api/v1/attendance/clock-out').send({ confirm: true });
+      const res = await employeeAgent
+        .post('/api/v1/attendance/clock-out')
+        .send({ confirm: true });
       expect(res.status).toBe(200);
       expect(res.body.requiresConfirmation).toBe(false);
       expect(res.body.session.status).toBe('COMPLETED');
@@ -219,14 +249,18 @@ describe('Attendance & Task Management (e2e)', () => {
 
     it('reconciliation reflects net working time, task time and unallocated time (BR-008..BR-010)', async () => {
       const today = new Date().toISOString().slice(0, 10);
-      const res = await employeeAgent.get('/api/v1/reconciliation/me').query({ date: today });
+      const res = await employeeAgent
+        .get('/api/v1/reconciliation/me')
+        .query({ date: today });
       expect(res.status).toBe(200);
       expect(res.body.netWorkingMinutes).toBeGreaterThanOrEqual(0);
       expect(res.body.taskMinutes).toBeGreaterThanOrEqual(0);
       expect(res.body.hasDataQualityException).toBe(false);
       // Net working time includes the whole clocked-in period (break included in gross,
       // subtracted separately), so it must be >= task time for a clean day.
-      expect(res.body.netWorkingMinutes).toBeGreaterThanOrEqual(res.body.taskMinutes);
+      expect(res.body.netWorkingMinutes).toBeGreaterThanOrEqual(
+        res.body.taskMinutes,
+      );
     });
   });
 
@@ -239,7 +273,9 @@ describe('Attendance & Task Management (e2e)', () => {
       const request_ = await employeeAgent.post('/api/v1/corrections').send({
         targetType: 'ATTENDANCE_SESSION',
         targetId: sessionId,
-        proposedStart: new Date(new Date(originalClockIn).getTime() - 60_000).toISOString(),
+        proposedStart: new Date(
+          new Date(originalClockIn).getTime() - 60_000,
+        ).toISOString(),
         reason: 'Clocked in a minute earlier than recorded',
       });
       expect(request_.status).toBe(201);
@@ -250,7 +286,9 @@ describe('Attendance & Task Management (e2e)', () => {
       expect(decide.status).toBe(201);
       expect(decide.body.status).toBe('APPROVED');
 
-      const audit = await adminAgent.get('/api/v1/audit').query({ action: 'CORRECTION_APPROVED' });
+      const audit = await adminAgent
+        .get('/api/v1/audit')
+        .query({ action: 'CORRECTION_APPROVED' });
       expect(audit.body.length).toBeGreaterThan(0);
     });
   });
@@ -258,7 +296,9 @@ describe('Attendance & Task Management (e2e)', () => {
   describe('Logout invalidates the session (US-001-004)', () => {
     it('protected endpoints are unreachable after logout', async () => {
       const logoutAgent = request.agent(httpServer);
-      await logoutAgent.post('/api/v1/auth/login').send({ email: employeeEmail, password: employeePassword });
+      await logoutAgent
+        .post('/api/v1/auth/login')
+        .send({ email: employeeEmail, password: employeePassword });
       const before = await logoutAgent.get('/api/v1/users/me');
       expect(before.status).toBe(200);
 

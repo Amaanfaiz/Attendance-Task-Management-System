@@ -1,4 +1,10 @@
-import { BadRequestException, Controller, Get, Query, Res } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Query,
+  Res,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { UserRole, getUtcDayRange } from '@atms/shared';
@@ -19,7 +25,9 @@ export class ReportsController {
   // browser testing: a same-day report came back empty).
   private parseRange(from?: string, to?: string) {
     if (!from || !to) {
-      throw new BadRequestException('from and to query parameters are required (ISO date)');
+      throw new BadRequestException(
+        'from and to query parameters are required (ISO date)',
+      );
     }
     return { from: getUtcDayRange(from).start, to: getUtcDayRange(to).end };
   }
@@ -34,8 +42,19 @@ export class ReportsController {
     rows: Record<string, unknown>[],
   ) {
     if (format === 'csv') return sendCsv(res, filename, rows);
-    if (format === 'xlsx') return sendXlsx(res, filename, rows, { title, periodFrom: from, periodTo: to });
-    return res.json({ title, periodFrom: from, periodTo: to, generatedAt: new Date().toISOString(), rows });
+    if (format === 'xlsx')
+      return sendXlsx(res, filename, rows, {
+        title,
+        periodFrom: from,
+        periodTo: to,
+      });
+    return res.json({
+      title,
+      periodFrom: from,
+      periodTo: to,
+      generatedAt: new Date().toISOString(),
+      rows,
+    });
   }
 
   @Get('attendance')
@@ -48,8 +67,20 @@ export class ReportsController {
     @Query('format') format?: Format,
   ) {
     const range = this.parseRange(from, to);
-    const rows = await this.reportsService.attendanceReport({ ...range, userId, departmentId });
-    return this.respond(res, format, 'Attendance Report', 'attendance-report', from, to, rows);
+    const rows = await this.reportsService.attendanceReport({
+      ...range,
+      userId,
+      departmentId,
+    });
+    return this.respond(
+      res,
+      format,
+      'Attendance Report',
+      'attendance-report',
+      from,
+      to,
+      rows,
+    );
   }
 
   @Get('task-time')
@@ -62,8 +93,20 @@ export class ReportsController {
     @Query('format') format?: Format,
   ) {
     const range = this.parseRange(from, to);
-    const rows = await this.reportsService.taskTimeReport({ ...range, userId, taskId });
-    return this.respond(res, format, 'Task Time Report', 'task-time-report', from, to, rows);
+    const rows = await this.reportsService.taskTimeReport({
+      ...range,
+      userId,
+      taskId,
+    });
+    return this.respond(
+      res,
+      format,
+      'Task Time Report',
+      'task-time-report',
+      from,
+      to,
+      rows,
+    );
   }
 
   @Get('unallocated')
@@ -75,8 +118,19 @@ export class ReportsController {
     @Query('format') format?: Format,
   ) {
     const range = this.parseRange(from, to);
-    const rows = await this.reportsService.unallocatedReport({ ...range, userId });
-    return this.respond(res, format, 'Unallocated Time Report', 'unallocated-report', from, to, rows);
+    const rows = await this.reportsService.unallocatedReport({
+      ...range,
+      userId,
+    });
+    return this.respond(
+      res,
+      format,
+      'Unallocated Time Report',
+      'unallocated-report',
+      from,
+      to,
+      rows,
+    );
   }
 
   @Get('breaks')
@@ -89,6 +143,14 @@ export class ReportsController {
   ) {
     const range = this.parseRange(from, to);
     const rows = await this.reportsService.breaksReport({ ...range, userId });
-    return this.respond(res, format, 'Break Report', 'break-report', from, to, rows);
+    return this.respond(
+      res,
+      format,
+      'Break Report',
+      'break-report',
+      from,
+      to,
+      rows,
+    );
   }
 }

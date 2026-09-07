@@ -32,10 +32,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
-    response.status(status).json(
-      typeof body === 'string'
-        ? { statusCode: status, message: body, path: request.url }
-        : { statusCode: status, path: request.url, ...(body as object) },
-    );
+    response
+      .status(status)
+      .json(
+        typeof body === 'string'
+          ? { statusCode: status, message: body, path: request.url }
+          : { statusCode: status, path: request.url, ...(body as object) },
+      );
   }
 }

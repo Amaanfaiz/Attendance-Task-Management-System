@@ -174,7 +174,7 @@ export default function MyDayPage() {
       </div>
 
       <Card>
-        <CardTitle>Today's Totals</CardTitle>
+        <CardTitle>Today&apos;s Totals</CardTitle>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Stat label="Worked" value={summary ? formatMinutes(summary.netWorkingMinutes) : '—'} />
           <Stat label="Task time" value={summary ? formatMinutes(summary.taskMinutes) : '—'} />
@@ -238,7 +238,7 @@ export default function MyDayPage() {
       </Card>
 
       <Card>
-        <CardTitle>Today's Timeline</CardTitle>
+        <CardTitle>Today&apos;s Timeline</CardTitle>
         {!summary || summary.timeline.length === 0 ? (
           <p className="text-sm text-slate-500">No activity recorded yet today.</p>
         ) : (

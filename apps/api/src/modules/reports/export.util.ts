@@ -3,10 +3,17 @@ import ExcelJS from 'exceljs';
 import { Response } from 'express';
 
 // AC-010-005-01/03: MVP supports CSV and XLSX, both stamped with generation time and period.
-export function sendCsv(res: Response, filename: string, rows: Record<string, unknown>[]) {
+export function sendCsv(
+  res: Response,
+  filename: string,
+  rows: Record<string, unknown>[],
+) {
   const csv = stringify(rows, { header: true });
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}.csv"`);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${filename}.csv"`,
+  );
   res.send(csv);
 }
 
@@ -40,6 +47,9 @@ export async function sendXlsx(
     'Content-Type',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   );
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}.xlsx"`);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${filename}.xlsx"`,
+  );
   await workbook.xlsx.write(res);
 }

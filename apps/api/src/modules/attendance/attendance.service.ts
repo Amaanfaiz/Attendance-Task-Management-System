@@ -1,5 +1,14 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { AttendanceSessionStatus, BreakRecordStatus, TaskTimeEntryStatus } from '@atms/shared';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  AttendanceSessionStatus,
+  BreakRecordStatus,
+  TaskTimeEntryStatus,
+} from '@atms/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -8,7 +17,15 @@ export class AttendanceService {
 
   private async findActiveSession(userId: string) {
     return this.prisma.attendanceSession.findFirst({
-      where: { userId, status: { in: [AttendanceSessionStatus.ACTIVE, AttendanceSessionStatus.ON_BREAK] } },
+      where: {
+        userId,
+        status: {
+          in: [
+            AttendanceSessionStatus.ACTIVE,
+            AttendanceSessionStatus.ON_BREAK,
+          ],
+        },
+      },
     });
   }
 
@@ -19,14 +36,20 @@ export class AttendanceService {
       return { state: 'CLOCKED_OUT' as const, session: null };
     }
     const activeBreak = await this.prisma.breakRecord.findFirst({
-      where: { attendanceSessionId: session.id, status: BreakRecordStatus.ACTIVE },
+      where: {
+        attendanceSessionId: session.id,
+        status: BreakRecordStatus.ACTIVE,
+      },
     });
     const activeTimer = await this.prisma.taskTimeEntry.findFirst({
       where: { userId, status: TaskTimeEntryStatus.RUNNING },
       include: { task: { select: { id: true, title: true } } },
     });
     return {
-      state: session.status === AttendanceSessionStatus.ON_BREAK ? ('ON_BREAK' as const) : ('WORKING' as const),
+      state:
+        session.status === AttendanceSessionStatus.ON_BREAK
+          ? ('ON_BREAK' as const)
+          : ('WORKING' as const),
       session,
       activeBreak,
       activeTimer,
@@ -45,7 +68,11 @@ export class AttendanceService {
     }
     try {
       return await this.prisma.attendanceSession.create({
-        data: { userId, clockInAt: new Date(), status: AttendanceSessionStatus.ACTIVE },
+        data: {
+          userId,
+          clockInAt: new Date(),
+          status: AttendanceSessionStatus.ACTIVE,
+        },
       });
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'P2002') {
@@ -67,7 +94,10 @@ export class AttendanceService {
     }
 
     const activeBreak = await this.prisma.breakRecord.findFirst({
-      where: { attendanceSessionId: session.id, status: BreakRecordStatus.ACTIVE },
+      where: {
+        attendanceSessionId: session.id,
+        status: BreakRecordStatus.ACTIVE,
+      },
     });
     const activeTimer = await this.prisma.taskTimeEntry.findFirst({
       where: { userId, status: TaskTimeEntryStatus.RUNNING },
@@ -134,7 +164,9 @@ export class AttendanceService {
       where: { id: sessionId },
       include: {
         breaks: true,
-        taskTimeEntries: { include: { task: { select: { id: true, title: true } } } },
+        taskTimeEntries: {
+          include: { task: { select: { id: true, title: true } } },
+        },
       },
     });
     if (!session) throw new NotFoundException('Attendance session not found');
@@ -147,9 +179,24 @@ export class AttendanceService {
   // US-003-008: admin live list of who is currently clocked in / on break.
   async getLive() {
     const sessions = await this.prisma.attendanceSession.findMany({
-      where: { status: { in: [AttendanceSessionStatus.ACTIVE, AttendanceSessionStatus.ON_BREAK] } },
+      where: {
+        status: {
+          in: [
+            AttendanceSessionStatus.ACTIVE,
+            AttendanceSessionStatus.ON_BREAK,
+          ],
+        },
+      },
       include: {
-        user: { select: { id: true, firstName: true, surname: true, email: true, departmentId: true } },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            surname: true,
+            email: true,
+            departmentId: true,
+          },
+        },
       },
       orderBy: { clockInAt: 'asc' },
     });

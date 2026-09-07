@@ -22,7 +22,10 @@ export class ReconciliationService {
 
     const sessions = await this.prisma.attendanceSession.findMany({
       where: { userId, clockInAt: { gte: start, lt: end } },
-      include: { breaks: true, taskTimeEntries: { include: { task: { select: { title: true } } } } },
+      include: {
+        breaks: true,
+        taskTimeEntries: { include: { task: { select: { title: true } } } },
+      },
       orderBy: { clockInAt: 'asc' },
     });
 
@@ -33,15 +36,29 @@ export class ReconciliationService {
     const timeline: TimelineEvent[] = [];
 
     for (const session of sessions) {
-      const attendanceInterval: Interval = { start: session.clockInAt, end: session.clockOutAt };
-      const breakIntervals: Interval[] = session.breaks.map((b) => ({ start: b.startAt, end: b.endAt }));
-      const taskIntervals: Interval[] = session.taskTimeEntries.map((t) => ({ start: t.startAt, end: t.endAt }));
+      const attendanceInterval: Interval = {
+        start: session.clockInAt,
+        end: session.clockOutAt,
+      };
+      const breakIntervals: Interval[] = session.breaks.map((b) => ({
+        start: b.startAt,
+        end: b.endAt,
+      }));
+      const taskIntervals: Interval[] = session.taskTimeEntries.map((t) => ({
+        start: t.startAt,
+        end: t.endAt,
+      }));
 
-      const result = reconcile(attendanceInterval, breakIntervals, taskIntervals);
+      const result = reconcile(
+        attendanceInterval,
+        breakIntervals,
+        taskIntervals,
+      );
       netWorkingMinutes += result.netWorkingMinutes;
       taskMinutes += result.taskMinutes;
       unallocatedMinutes += result.unallocatedMinutes;
-      hasDataQualityException = hasDataQualityException || result.hasDataQualityException;
+      hasDataQualityException =
+        hasDataQualityException || result.hasDataQualityException;
 
       timeline.push({
         type: 'ATTENDANCE',
@@ -50,10 +67,20 @@ export class ReconciliationService {
         end: session.clockOutAt,
       });
       for (const b of session.breaks) {
-        timeline.push({ type: 'BREAK', label: 'Break', start: b.startAt, end: b.endAt });
+        timeline.push({
+          type: 'BREAK',
+          label: 'Break',
+          start: b.startAt,
+          end: b.endAt,
+        });
       }
       for (const t of session.taskTimeEntries) {
-        timeline.push({ type: 'TASK', label: t.task.title, start: t.startAt, end: t.endAt });
+        timeline.push({
+          type: 'TASK',
+          label: t.task.title,
+          start: t.startAt,
+          end: t.endAt,
+        });
       }
     }
 

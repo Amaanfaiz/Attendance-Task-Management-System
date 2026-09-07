@@ -27,10 +27,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   // AC-001-003-04: inactive/suspended/rejected accounts must be blocked even with a
   // still-valid access token, so we re-check current status on every request.
   async validate(payload: AccessTokenPayload) {
-    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
     if (!user || user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException('Account is not active');
     }
-    return { id: user.id, email: user.email, role: user.role, status: user.status };
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    };
   }
 }

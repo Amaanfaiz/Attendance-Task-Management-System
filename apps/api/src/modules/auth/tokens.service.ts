@@ -46,16 +46,22 @@ export class TokensService {
   }
 
   /** AC-001-007-01/02: a refresh token unused past the configured inactivity window is treated as expired. */
-  async verifyRefreshToken(token: string | undefined): Promise<{ userId: string; tokenId: string } | null> {
+  async verifyRefreshToken(
+    token: string | undefined,
+  ): Promise<{ userId: string; tokenId: string } | null> {
     if (!token) {
       return null;
     }
     const tokenHash = this.hashToken(token);
-    const record = await this.prisma.refreshToken.findUnique({ where: { tokenHash } });
+    const record = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+    });
     if (!record || record.revokedAt || record.expiresAt < new Date()) {
       return null;
     }
-    const settings = await this.prisma.appSettings.findUnique({ where: { id: 'default' } });
+    const settings = await this.prisma.appSettings.findUnique({
+      where: { id: 'default' },
+    });
     const inactivityMinutes = settings?.sessionInactivityTimeoutMinutes ?? 30;
     const inactiveMs = Date.now() - record.lastUsedAt.getTime();
     if (inactiveMs > inactivityMinutes * 60_000) {

@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { calculateNetWorkingMinutes, reconcile, type Interval } from '@atms/shared';
+import {
+  calculateNetWorkingMinutes,
+  reconcile,
+  type Interval,
+} from '@atms/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface ReportFilters {
@@ -19,16 +23,30 @@ export class ReportsService {
       where: {
         clockInAt: { gte: filters.from, lte: filters.to },
         userId: filters.userId,
-        user: filters.departmentId ? { departmentId: filters.departmentId } : undefined,
+        user: filters.departmentId
+          ? { departmentId: filters.departmentId }
+          : undefined,
       },
-      include: { user: { select: { firstName: true, surname: true, email: true } }, breaks: true },
+      include: {
+        user: { select: { firstName: true, surname: true, email: true } },
+        breaks: true,
+      },
       orderBy: { clockInAt: 'asc' },
     });
 
     return sessions.map((s) => {
-      const attendanceInterval: Interval = { start: s.clockInAt, end: s.clockOutAt };
-      const breakIntervals: Interval[] = s.breaks.map((b) => ({ start: b.startAt, end: b.endAt }));
-      const netWorkingMinutes = calculateNetWorkingMinutes(attendanceInterval, breakIntervals);
+      const attendanceInterval: Interval = {
+        start: s.clockInAt,
+        end: s.clockOutAt,
+      };
+      const breakIntervals: Interval[] = s.breaks.map((b) => ({
+        start: b.startAt,
+        end: b.endAt,
+      }));
+      const netWorkingMinutes = calculateNetWorkingMinutes(
+        attendanceInterval,
+        breakIntervals,
+      );
       const breakMinutes = breakIntervals.reduce((sum, b) => {
         const end = b.end ?? new Date();
         return sum + Math.max(0, (end.getTime() - b.start.getTime()) / 60000);
@@ -54,7 +72,9 @@ export class ReportsService {
         startAt: { gte: filters.from, lte: filters.to },
         userId: filters.userId,
         taskId: filters.taskId,
-        user: filters.departmentId ? { departmentId: filters.departmentId } : undefined,
+        user: filters.departmentId
+          ? { departmentId: filters.departmentId }
+          : undefined,
       },
       include: {
         user: { select: { firstName: true, surname: true } },
@@ -65,7 +85,10 @@ export class ReportsService {
 
     return entries.map((e) => {
       const end = e.endAt ?? new Date();
-      const durationMinutes = Math.max(0, Math.round((end.getTime() - e.startAt.getTime()) / 60000));
+      const durationMinutes = Math.max(
+        0,
+        Math.round((end.getTime() - e.startAt.getTime()) / 60000),
+      );
       return {
         date: e.startAt.toISOString().slice(0, 10),
         employee: `${e.user.firstName} ${e.user.surname}`,
@@ -85,7 +108,9 @@ export class ReportsService {
       where: {
         clockInAt: { gte: filters.from, lte: filters.to },
         userId: filters.userId,
-        user: filters.departmentId ? { departmentId: filters.departmentId } : undefined,
+        user: filters.departmentId
+          ? { departmentId: filters.departmentId }
+          : undefined,
       },
       include: {
         user: { select: { firstName: true, surname: true } },
@@ -119,16 +144,25 @@ export class ReportsService {
         startAt: { gte: filters.from, lte: filters.to },
         attendanceSession: {
           userId: filters.userId,
-          user: filters.departmentId ? { departmentId: filters.departmentId } : undefined,
+          user: filters.departmentId
+            ? { departmentId: filters.departmentId }
+            : undefined,
         },
       },
-      include: { attendanceSession: { include: { user: { select: { firstName: true, surname: true } } } } },
+      include: {
+        attendanceSession: {
+          include: { user: { select: { firstName: true, surname: true } } },
+        },
+      },
       orderBy: { startAt: 'asc' },
     });
 
     return breaks.map((b) => {
       const end = b.endAt ?? new Date();
-      const durationMinutes = Math.max(0, Math.round((end.getTime() - b.startAt.getTime()) / 60000));
+      const durationMinutes = Math.max(
+        0,
+        Math.round((end.getTime() - b.startAt.getTime()) / 60000),
+      );
       return {
         date: b.startAt.toISOString().slice(0, 10),
         employee: `${b.attendanceSession.user.firstName} ${b.attendanceSession.user.surname}`,

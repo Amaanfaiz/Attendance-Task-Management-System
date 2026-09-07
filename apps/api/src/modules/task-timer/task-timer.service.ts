@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   AttendanceSessionStatus,
   TaskStatus,
@@ -16,7 +21,9 @@ export class TaskTimerService {
       where: { userId, status: AttendanceSessionStatus.ACTIVE },
     });
     if (!session) {
-      throw new BadRequestException('You must be clocked in and not on break to use the task timer');
+      throw new BadRequestException(
+        'You must be clocked in and not on break to use the task timer',
+      );
     }
     return session;
   }
@@ -27,8 +34,13 @@ export class TaskTimerService {
     if (task.assigneeId !== userId) {
       throw new BadRequestException('This task is not assigned to you');
     }
-    if (task.status === TaskStatus.COMPLETED || task.status === TaskStatus.CANCELLED) {
-      throw new BadRequestException('This task is completed or cancelled and cannot be timed');
+    if (
+      task.status === TaskStatus.COMPLETED ||
+      task.status === TaskStatus.CANCELLED
+    ) {
+      throw new BadRequestException(
+        'This task is completed or cancelled and cannot be timed',
+      );
     }
     return task;
   }
@@ -64,7 +76,12 @@ export class TaskTimerService {
           },
         }),
         ...(task.status === TaskStatus.TO_DO
-          ? [this.prisma.task.update({ where: { id: taskId }, data: { status: TaskStatus.IN_PROGRESS } })]
+          ? [
+              this.prisma.task.update({
+                where: { id: taskId },
+                data: { status: TaskStatus.IN_PROGRESS },
+              }),
+            ]
           : []),
       ]);
       return entry;
@@ -78,9 +95,13 @@ export class TaskTimerService {
 
   /** Resume is start() for a task the user has worked on before — a fresh segment (AC-006-004-02). */
   async resume(userId: string, taskId: string) {
-    const priorEntry = await this.prisma.taskTimeEntry.findFirst({ where: { userId, taskId } });
+    const priorEntry = await this.prisma.taskTimeEntry.findFirst({
+      where: { userId, taskId },
+    });
     if (!priorEntry) {
-      throw new BadRequestException('This task has not been started before; use start instead');
+      throw new BadRequestException(
+        'This task has not been started before; use start instead',
+      );
     }
     return this.start(userId, taskId);
   }
@@ -143,7 +164,12 @@ export class TaskTimerService {
         },
       }),
       ...(newTask.status === TaskStatus.TO_DO
-        ? [this.prisma.task.update({ where: { id: newTaskId }, data: { status: TaskStatus.IN_PROGRESS } })]
+        ? [
+            this.prisma.task.update({
+              where: { id: newTaskId },
+              data: { status: TaskStatus.IN_PROGRESS },
+            }),
+          ]
         : []),
     ]);
     return newEntry;

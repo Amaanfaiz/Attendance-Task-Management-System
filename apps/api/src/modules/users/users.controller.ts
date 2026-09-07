@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
   AdminCreateUserInput,
@@ -12,7 +20,10 @@ import {
   updateOwnProfileSchema,
 } from '@atms/shared';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  AuthenticatedUser,
+} from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { UsersService } from './users.service';
 
@@ -29,7 +40,8 @@ export class UsersController {
   @Patch('me')
   updateMe(
     @CurrentUser('id') userId: string,
-    @Body(new ZodValidationPipe(updateOwnProfileSchema)) body: UpdateOwnProfileInput,
+    @Body(new ZodValidationPipe(updateOwnProfileSchema))
+    body: UpdateOwnProfileInput,
   ) {
     return this.usersService.updateOwnProfile(userId, body);
   }
@@ -49,7 +61,8 @@ export class UsersController {
   @Post()
   create(
     @CurrentUser() actor: AuthenticatedUser,
-    @Body(new ZodValidationPipe(adminCreateUserSchema)) body: AdminCreateUserInput,
+    @Body(new ZodValidationPipe(adminCreateUserSchema))
+    body: AdminCreateUserInput,
   ) {
     return this.usersService.adminCreate(actor.id, body);
   }
@@ -59,7 +72,8 @@ export class UsersController {
   update(
     @CurrentUser() actor: AuthenticatedUser,
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(adminUpdateUserSchema)) body: AdminUpdateUserInput,
+    @Body(new ZodValidationPipe(adminUpdateUserSchema))
+    body: AdminUpdateUserInput,
   ) {
     return this.usersService.adminUpdate(actor.id, id, body);
   }

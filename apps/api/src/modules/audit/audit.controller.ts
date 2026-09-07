@@ -27,7 +27,11 @@ export class AuditController {
           lte: to ? new Date(to) : undefined,
         },
       },
-      include: { actor: { select: { id: true, firstName: true, surname: true, email: true } } },
+      include: {
+        actor: {
+          select: { id: true, firstName: true, surname: true, email: true },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       take: 500,
     });
