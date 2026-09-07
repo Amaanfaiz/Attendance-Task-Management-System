@@ -137,6 +137,10 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'NODE_ENV', value: 'production' }
             { name: 'PORT', value: '3001' }
             { name: 'COOKIE_SECURE', value: 'true' }
+            // api and web get separate *.azurecontainerapps.io subdomains, so the
+            // auth cookies are cross-site from the browser's point of view — see
+            // cookie.util.ts. 'none' forces Secure regardless of COOKIE_SECURE above.
+            { name: 'COOKIE_SAME_SITE', value: 'none' }
             { name: 'WEB_ORIGIN', value: webOrigin }
           ]
           probes: [

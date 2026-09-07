@@ -2,6 +2,7 @@ export default () => ({
   port: parseInt(process.env.PORT ?? '3001', 10),
   webOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:3000',
   cookieSecure: process.env.COOKIE_SECURE === 'true',
+  cookieSameSite: process.env.COOKIE_SAME_SITE ?? 'lax',
   jwt: {
     accessSecret:
       process.env.JWT_ACCESS_SECRET ?? 'dev_access_secret_change_me',
