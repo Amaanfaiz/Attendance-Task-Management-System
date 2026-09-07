@@ -121,6 +121,17 @@ export const createDepartmentSchema = z.object({
 });
 export type CreateDepartmentInput = z.infer<typeof createDepartmentSchema>;
 
+export const updateAppSettingsSchema = z
+  .object({
+    requireRegistrationApproval: z.boolean(),
+    employeesCanCreateTasks: z.boolean(),
+    sessionInactivityTimeoutMinutes: z.number().int().positive(),
+    missingClockOutThresholdMinutes: z.number().int().positive(),
+    longRunningTimerThresholdMinutes: z.number().int().positive(),
+  })
+  .partial();
+export type UpdateAppSettingsInput = z.infer<typeof updateAppSettingsSchema>;
+
 export const reportFilterSchema = z.object({
   dateFrom: z.string().datetime(),
   dateTo: z.string().datetime(),

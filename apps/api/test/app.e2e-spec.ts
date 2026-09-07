@@ -327,6 +327,25 @@ describe('Attendance & Task Management (e2e)', () => {
     });
   });
 
+  describe('Settings updates are validated, not mass-assigned', () => {
+    it('rejects an unknown/extra field instead of writing it through', async () => {
+      const res = await adminAgent.patch('/api/v1/settings').send({
+        employeesCanCreateTasks: false,
+        id: 'not-default', // must never be able to override the singleton row's id
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe('default');
+      expect(res.body.employeesCanCreateTasks).toBe(false);
+    });
+
+    it('rejects an invalid value with a 400', async () => {
+      const res = await adminAgent.patch('/api/v1/settings').send({
+        sessionInactivityTimeoutMinutes: -5,
+      });
+      expect(res.status).toBe(400);
+    });
+  });
+
   describe('Logout invalidates the session (US-001-004)', () => {
     it('protected endpoints are unreachable after logout', async () => {
       const logoutAgent = request.agent(httpServer);

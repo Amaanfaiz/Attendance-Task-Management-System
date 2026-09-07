@@ -1,7 +1,12 @@
 import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { UserRole } from '@atms/shared';
+import {
+  UpdateAppSettingsInput,
+  UserRole,
+  updateAppSettingsSchema,
+} from '@atms/shared';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @ApiTags('settings')
@@ -21,18 +26,12 @@ export class SettingsController {
   @Roles(UserRole.ADMINISTRATOR)
   @Patch()
   update(
-    @Body()
-    body: Partial<{
-      requireRegistrationApproval: boolean;
-      employeesCanCreateTasks: boolean;
-      sessionInactivityTimeoutMinutes: number;
-      missingClockOutThresholdMinutes: number;
-      longRunningTimerThresholdMinutes: number;
-    }>,
+    @Body(new ZodValidationPipe(updateAppSettingsSchema))
+    body: UpdateAppSettingsInput,
   ) {
     return this.prisma.appSettings.upsert({
       where: { id: 'default' },
-      create: { id: 'default', ...body },
+      create: { ...body, id: 'default' },
       update: body,
     });
   }
