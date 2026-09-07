@@ -1,0 +1,45 @@
+# OS-locked duplicate source docs (tracked copies live in /docs)
+Simple_Attendance_Task_Management_Requirements_Tracker_v1.0.xlsx
+Simple_Attendance_Task_Management_SRS_v1.0.docx
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Env files
+.env*
+!.env.example
+!*.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+playwright-report/
+test-results/
+
+# Prisma
+*.db
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes data (if any local bind mounts)
+pgdata/

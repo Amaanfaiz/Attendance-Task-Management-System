@@ -1,0 +1,130 @@
+import { z } from 'zod';
+import { TaskPriority, UserRole, UserStatus } from './enums';
+
+// Shared minimum password policy — enforced identically client- and server-side (AC-001-001-03).
+export const passwordSchema = z
+  .string()
+  .min(10, 'Password must be at least 10 characters')
+  .regex(/[a-z]/, 'Password must contain a lowercase letter')
+  .regex(/[A-Z]/, 'Password must contain an uppercase letter')
+  .regex(/[0-9]/, 'Password must contain a number');
+
+export const registerSchema = z.object({
+  firstName: z.string().min(1).max(100),
+  surname: z.string().min(1).max(100),
+  email: z.string().email(),
+  phoneNumber: z.string().min(1).max(30),
+  password: passwordSchema,
+});
+export type RegisterInput = z.infer<typeof registerSchema>;
+
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+export type LoginInput = z.infer<typeof loginSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1),
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export const createTaskSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(4000).optional(),
+  priority: z.nativeEnum(TaskPriority).default(TaskPriority.MEDIUM),
+  dueDate: z.string().datetime().optional(),
+  estimatedMinutes: z.number().int().positive().optional(),
+  assigneeId: z.string().uuid().optional(),
+});
+export type CreateTaskInput = z.infer<typeof createTaskSchema>;
+
+export const updateTaskSchema = createTaskSchema.partial().extend({
+  status: z.string().optional(),
+});
+export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
+
+export const startTaskTimerSchema = z.object({
+  taskId: z.string().uuid(),
+});
+export type StartTaskTimerInput = z.infer<typeof startTaskTimerSchema>;
+
+export const switchTaskSchema = z.object({
+  taskId: z.string().uuid(),
+});
+export type SwitchTaskInput = z.infer<typeof switchTaskSchema>;
+
+export const requestCorrectionSchema = z.object({
+  targetType: z.enum(['ATTENDANCE_SESSION', 'BREAK_RECORD', 'TASK_TIME_ENTRY']),
+  targetId: z.string().uuid(),
+  proposedStart: z.string().datetime().optional(),
+  proposedEnd: z.string().datetime().optional(),
+  reason: z.string().min(10).max(2000),
+});
+export type RequestCorrectionInput = z.infer<typeof requestCorrectionSchema>;
+
+export const decideCorrectionSchema = z.object({
+  approve: z.boolean(),
+  comment: z.string().max(2000).optional(),
+});
+export type DecideCorrectionInput = z.infer<typeof decideCorrectionSchema>;
+
+export const adminCreateUserSchema = z.object({
+  firstName: z.string().min(1).max(100),
+  surname: z.string().min(1).max(100),
+  email: z.string().email(),
+  phoneNumber: z.string().min(1).max(30),
+  role: z.nativeEnum(UserRole).default(UserRole.EMPLOYEE),
+  departmentId: z.string().uuid().optional(),
+  employeeNumber: z.string().max(50).optional(),
+});
+export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
+
+export const adminUpdateUserSchema = z.object({
+  firstName: z.string().min(1).max(100).optional(),
+  surname: z.string().min(1).max(100).optional(),
+  email: z.string().email().optional(),
+  phoneNumber: z.string().min(1).max(30).optional(),
+  role: z.nativeEnum(UserRole).optional(),
+  status: z.nativeEnum(UserStatus).optional(),
+  departmentId: z.string().uuid().nullable().optional(),
+  employeeNumber: z.string().max(50).nullable().optional(),
+});
+export type AdminUpdateUserInput = z.infer<typeof adminUpdateUserSchema>;
+
+export const updateOwnProfileSchema = z.object({
+  firstName: z.string().min(1).max(100).optional(),
+  surname: z.string().min(1).max(100).optional(),
+  phoneNumber: z.string().min(1).max(30).optional(),
+});
+export type UpdateOwnProfileInput = z.infer<typeof updateOwnProfileSchema>;
+
+export const rejectUserSchema = z.object({
+  reason: z.string().max(2000).optional(),
+});
+export type RejectUserInput = z.infer<typeof rejectUserSchema>;
+
+export const createDepartmentSchema = z.object({
+  name: z.string().min(1).max(150),
+});
+export type CreateDepartmentInput = z.infer<typeof createDepartmentSchema>;
+
+export const reportFilterSchema = z.object({
+  dateFrom: z.string().datetime(),
+  dateTo: z.string().datetime(),
+  userId: z.string().uuid().optional(),
+  departmentId: z.string().uuid().optional(),
+});
+export type ReportFilterInput = z.infer<typeof reportFilterSchema>;
