@@ -50,8 +50,15 @@ export class TasksController {
   }
 
   @Get(':id')
-  async getById(@Param('id') id: string) {
-    const task = await this.tasksService.findById(id);
+  async getById(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
+    const task = await this.tasksService.findByIdForUser(
+      id,
+      actor.id,
+      actor.role,
+    );
     const actualMinutes = await this.tasksService.getActualMinutes(id);
     return { ...task, actualMinutes };
   }

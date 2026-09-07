@@ -293,6 +293,40 @@ describe('Attendance & Task Management (e2e)', () => {
     });
   });
 
+  describe('Task detail is not organisation-wide visible (data isolation)', () => {
+    it('an employee cannot view a task assigned to a different employee', async () => {
+      const otherAgent = request.agent(httpServer);
+      const otherEmail = 'e2e-other-employee@atms.local';
+      const otherHash = await argon2.hash('OtherPass123', {
+        type: argon2.argon2id,
+      });
+      await prisma.user.create({
+        data: {
+          firstName: 'Other',
+          surname: 'Employee',
+          email: otherEmail,
+          phoneNumber: '0000000004',
+          passwordHash: otherHash,
+          role: 'EMPLOYEE',
+          status: 'ACTIVE',
+        },
+      });
+      const login = await otherAgent
+        .post('/api/v1/auth/login')
+        .send({ email: otherEmail, password: 'OtherPass123' });
+      expect(login.status).toBe(200);
+
+      const blocked = await otherAgent.get(`/api/v1/tasks/${taskId}`);
+      expect(blocked.status).toBe(403);
+
+      const allowed = await employeeAgent.get(`/api/v1/tasks/${taskId}`);
+      expect(allowed.status).toBe(200);
+
+      const adminView = await adminAgent.get(`/api/v1/tasks/${taskId}`);
+      expect(adminView.status).toBe(200);
+    });
+  });
+
   describe('Logout invalidates the session (US-001-004)', () => {
     it('protected endpoints are unreachable after logout', async () => {
       const logoutAgent = request.agent(httpServer);
@@ -304,6 +338,20 @@ describe('Attendance & Task Management (e2e)', () => {
 
       await logoutAgent.post('/api/v1/auth/logout');
       const afterLogout = await logoutAgent.post('/api/v1/auth/refresh');
+      expect(afterLogout.status).toBe(401);
+    });
+
+    it('logout succeeds even with no access token present (only the refresh cookie)', async () => {
+      const agent = request.agent(httpServer);
+      await agent
+        .post('/api/v1/auth/login')
+        .send({ email: employeeEmail, password: employeePassword });
+      await agent.jar.setCookie('atms_access=; Max-Age=0; Path=/');
+
+      const res = await agent.post('/api/v1/auth/logout');
+      expect(res.status).toBe(200);
+
+      const afterLogout = await agent.post('/api/v1/auth/refresh');
       expect(afterLogout.status).toBe(401);
     });
   });

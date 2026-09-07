@@ -76,6 +76,20 @@ export class TasksService {
     return task;
   }
 
+  // Task detail is not organisation-wide visible: an employee may only view a task
+  // that's assigned to them or that they created; administrators may view any task.
+  async findByIdForUser(id: string, actorId: string, actorRole: string) {
+    const task = await this.findById(id);
+    if (
+      actorRole !== UserRole.ADMINISTRATOR &&
+      task.assigneeId !== actorId &&
+      task.createdById !== actorId
+    ) {
+      throw new ForbiddenException('You do not have access to this task');
+    }
+    return task;
+  }
+
   // AC-005-008-01/02: employee list defaults to their own active tasks, filterable.
   async listForUser(userId: string, status?: string, priority?: string) {
     return this.prisma.task.findMany({

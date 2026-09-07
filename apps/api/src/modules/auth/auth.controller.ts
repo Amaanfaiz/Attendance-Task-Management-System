@@ -89,6 +89,11 @@ export class AuthController {
     return { message: 'Session refreshed' };
   }
 
+  // Public: logout's only job is revoking the refresh cookie, which the handler reads
+  // directly — it must not depend on a still-valid access token, or a client whose
+  // access token already expired (but whose refresh token hasn't) could never
+  // successfully log out via a direct call to this endpoint.
+  @Public()
   @Post('logout')
   @HttpCode(200)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
