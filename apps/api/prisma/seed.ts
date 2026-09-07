@@ -32,7 +32,10 @@ async function main() {
       status: 'ACTIVE',
       departmentId: engineering.id,
     },
-    update: {},
+    // Re-running the seed with a new SEED_ADMIN_PASSWORD (e.g. rotating the demo
+    // credential before/after a public demo) must actually take effect — an empty
+    // update clause here would silently leave the old password hash in place.
+    update: { passwordHash: adminPasswordHash },
   });
 
   const employeeEmail = process.env.SEED_EMPLOYEE_EMAIL ?? 'employee@atms.local';
@@ -53,7 +56,7 @@ async function main() {
       approvedById: admin.id,
       approvedAt: new Date(),
     },
-    update: {},
+    update: { passwordHash: employeePasswordHash },
   });
 
   const existingSeedTasks = await prisma.task.count({ where: { createdById: admin.id } });
