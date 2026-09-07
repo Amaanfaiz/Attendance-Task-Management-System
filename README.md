@@ -61,6 +61,13 @@ docker compose up -d --build
 Brings up Postgres, the API (port 3001) and the web app (port 3000) as three containers,
 matching the images used in production deployment.
 
+## Deployment
+
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the Azure Container Apps deployment
+procedure (Bicep template in [`infra/main.bicep`](infra/main.bicep) and a manual-trigger
+GitHub Actions workflow). See [`docs/BACKUP_AND_RESTORE.md`](docs/BACKUP_AND_RESTORE.md)
+for the backup policy and restore procedure.
+
 ## Tests
 
 ```bash

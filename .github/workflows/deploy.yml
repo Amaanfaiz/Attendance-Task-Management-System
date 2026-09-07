@@ -1,0 +1,84 @@
+name: Deploy
+
+# Manual trigger only — a bad build should never reach production just because
+# someone pushed to main. Requires AZURE_CREDENTIALS, ACR_NAME and
+# AZURE_RESOURCE_GROUP repository secrets (see docs/DEPLOYMENT.md); the job
+# fails fast with a clear message if they're missing rather than partially
+# deploying.
+on:
+  workflow_dispatch:
+
+jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required secrets are configured
+        run: |
+          missing=""
+          [ -z "${{ secrets.AZURE_CREDENTIALS }}" ] && missing="$missing AZURE_CREDENTIALS"
+          [ -z "${{ secrets.ACR_NAME }}" ] && missing="$missing ACR_NAME"
+          [ -z "${{ secrets.AZURE_RESOURCE_GROUP }}" ] && missing="$missing AZURE_RESOURCE_GROUP"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing required secrets:$missing — see docs/DEPLOYMENT.md step 5"
+            exit 1
+          fi
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: check-secrets
+    outputs:
+      image-tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: tag
+        run: echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Build and push API image
+        run: |
+          docker build -f apps/api/Dockerfile \
+            -t ${{ secrets.ACR_NAME }}.azurecr.io/atms-api:${{ steps.tag.outputs.tag }} \
+            -t ${{ secrets.ACR_NAME }}.azurecr.io/atms-api:latest .
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/atms-api:${{ steps.tag.outputs.tag }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/atms-api:latest
+
+      - name: Build and push web image
+        run: |
+          docker build -f apps/web/Dockerfile \
+            -t ${{ secrets.ACR_NAME }}.azurecr.io/atms-web:${{ steps.tag.outputs.tag }} \
+            -t ${{ secrets.ACR_NAME }}.azurecr.io/atms-web:latest .
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/atms-web:${{ steps.tag.outputs.tag }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/atms-web:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Update API Container App
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name atms-api \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --image ${{ secrets.ACR_NAME }}.azurecr.io/atms-api:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Update web Container App
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name atms-web \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --image ${{ secrets.ACR_NAME }}.azurecr.io/atms-web:${{ needs.build-and-push.outputs.image-tag }}
