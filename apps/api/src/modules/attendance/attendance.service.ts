@@ -8,6 +8,7 @@ import {
   AttendanceSessionStatus,
   BreakRecordStatus,
   TaskTimeEntryStatus,
+  getUtcDayRange,
 } from '@atms/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -145,13 +146,20 @@ export class AttendanceService {
   }
 
   // AC-003-007-01/02/03: own history, chronological, filterable by date range.
+  //
+  // `to` must mean "through the end of that day", not "at exactly its first
+  // instant" - new Date('2026-09-08') parses as 2026-09-08T00:00:00.000Z, so a
+  // naive `lte: new Date(to)` excluded almost every record on the `to` date
+  // itself (everything but a clock-in at exactly UTC midnight). Found live:
+  // filtering from=today&to=today returned 0 records despite a same-day
+  // session existing. Use getUtcDayRange's end-of-day boundary instead.
   async getMyHistory(userId: string, from?: string, to?: string) {
     return this.prisma.attendanceSession.findMany({
       where: {
         userId,
         clockInAt: {
-          gte: from ? new Date(from) : undefined,
-          lte: to ? new Date(to) : undefined,
+          gte: from ? getUtcDayRange(from).start : undefined,
+          lte: to ? new Date(getUtcDayRange(to).end.getTime() - 1) : undefined,
         },
       },
       include: { breaks: true },
