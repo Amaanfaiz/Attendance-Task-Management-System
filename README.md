@@ -54,19 +54,15 @@ before any real deployment — see `SEED_ADMIN_PASSWORD`/`SEED_EMPLOYEE_PASSWORD
 | Administrator | `admin@atms.local` | `Admin123!Change` |
 | Employee | `employee@atms.local` | `Employee123!Change` |
 
-## Live temporary demo
+## Live demo (Azure)
 
-**https://complement-estimation-see-matthew.trycloudflare.com**
+**https://atms-web.calmmeadow-ac85e2f9.centralus.azurecontainerapps.io**
 
-This is a temporary tunnel to a local dev environment, not the real Azure hosting from
-[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — it goes down once that session ends. The
-demo passwords below were rotated away from the seed defaults above before exposing it
-publicly, so use these here, not the table above:
-
-| Role | Email | Password |
-|---|---|---|
-| Administrator | `admin@atms.local` | `MqRHfKfm1uj8!Aa1` |
-| Employee | `employee@atms.local` | `yuWsxQgWYhav!Aa1` |
+Hosted per [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) on Azure Container Apps + Azure
+Database for PostgreSQL Flexible Server. This environment has its own dedicated
+admin/employee accounts, separate from the local seed defaults above — since this is a
+public repository, ask the project owner for those credentials rather than looking for
+them here.
 
 ## Running the full stack in Docker
 
