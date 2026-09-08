@@ -45,7 +45,12 @@ resource dbServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-preview'
   name: dbServerName
   location: location
   sku: {
-    name: 'Standard_B1ms'
+    // Bumped from B1ms after a load test (docs/PERFORMANCE.md, RISK-007) showed
+    // write-path endpoints exceeding the NFR-001 p95<500ms target under just 12
+    // concurrent writers — consistent with B1ms's single vCore running out of
+    // burst credit. B2s doubles vCores/credit pool at roughly 2x cost; escalate
+    // to a General Purpose SKU only once a real multi-employee org is onboarded.
+    name: 'Standard_B2s'
     tier: 'Burstable'
   }
   properties: {
@@ -134,7 +139,10 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
           // `az containerapp update --image ...` step replaces it with the real one on
           // the first real deploy.
           image: 'mcr.microsoft.com/k8se/quickstart:latest'
-          resources: { cpu: json('0.5'), memory: '1Gi' }
+          // Doubled from 0.5/1Gi after the same load test (docs/PERFORMANCE.md,
+          // RISK-007) found write-path p95 latency exceeding target — Argon2id
+          // hashing and Prisma writes are the CPU-bound work on this container.
+          resources: { cpu: json('1.0'), memory: '2Gi' }
           env: [
             { name: 'DATABASE_URL', secretRef: 'database-url' }
             { name: 'JWT_ACCESS_SECRET', secretRef: 'jwt-access-secret' }
