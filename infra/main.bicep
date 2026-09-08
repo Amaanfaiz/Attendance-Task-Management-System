@@ -127,8 +127,13 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'api'
-          // Placeholder tag — the deploy workflow updates this to the built image digest.
-          image: '${acr.properties.loginServer}/atms-api:latest'
+          // Container Apps requires a pullable image at creation time — atms-api:latest
+          // doesn't exist in a freshly-created, empty registry, and the deployment fails
+          // outright if it's referenced here (confirmed: "MANIFEST_UNKNOWN"). Bootstrap
+          // with Microsoft's own public quickstart image; the deploy workflow's
+          // `az containerapp update --image ...` step replaces it with the real one on
+          // the first real deploy.
+          image: 'mcr.microsoft.com/k8se/quickstart:latest'
           resources: { cpu: json('0.5'), memory: '1Gi' }
           env: [
             { name: 'DATABASE_URL', secretRef: 'database-url' }
@@ -183,7 +188,8 @@ resource webApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'web'
-          image: '${acr.properties.loginServer}/atms-web:latest'
+          // See the matching comment on the api container above — same bootstrap issue.
+          image: 'mcr.microsoft.com/k8se/quickstart:latest'
           resources: { cpu: json('0.5'), memory: '1Gi' }
           env: [
             { name: 'NEXT_PUBLIC_API_URL', value: 'https://${apiApp.properties.configuration.ingress.fqdn}' }
