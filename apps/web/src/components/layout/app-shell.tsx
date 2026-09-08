@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -36,13 +36,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // AC-001-007-04: a user redirected here after having been signed in (session
   // expired mid-use) should see a clear reason, not the same blank login page
-  // as someone who was never signed in.
-  const wasAuthenticated = useRef(false);
-  if (user) wasAuthenticated.current = true;
+  // as someone who was never signed in. sessionStorage (not a React ref) because
+  // this has to survive a full page reload/navigation, not just SPA client state
+  // — a ref alone is empty again on the very first render after e.g. reopening
+  // the tab, which is exactly when a real expired session is most likely to be
+  // discovered.
+  if (user) {
+    try {
+      sessionStorage.setItem('atms_had_session', '1');
+    } catch {
+      /* sessionStorage unavailable (e.g. private browsing) — degrade silently */
+    }
+  }
 
   useEffect(() => {
     if (!isLoading && (isError || !user)) {
-      router.replace(wasAuthenticated.current ? '/login?expired=1' : '/login');
+      let hadSession = false;
+      try {
+        hadSession = sessionStorage.getItem('atms_had_session') === '1';
+        sessionStorage.removeItem('atms_had_session');
+      } catch {
+        /* sessionStorage unavailable — fall through with hadSession = false */
+      }
+      router.replace(hadSession ? '/login?expired=1' : '/login');
     }
   }, [isLoading, isError, user, router]);
 
@@ -60,6 +76,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await api.post('/auth/logout');
     queryClient.clear();
+    try {
+      sessionStorage.removeItem('atms_had_session');
+    } catch {
+      /* sessionStorage unavailable — nothing to clear */
+    }
     router.replace('/login');
   };
 
