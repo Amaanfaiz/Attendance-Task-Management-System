@@ -1,6 +1,6 @@
 # Performance Testing (NFR-001)
 
-Status: **tested against a defined reference load; one real gap found, not yet fixed.**
+Status: **tested against a defined reference load; one real gap found, partially fixed.**
 
 NFR-001 reads: "Normal interactive API operations should target p95 response
 time under 500 ms under agreed reference load." Neither the SRS nor the
@@ -71,18 +71,41 @@ property), and under concurrent load on a 0.5 vCPU container that cost
 compounds — the same underlying cause as the write-path slowdown above,
 just harder to isolate cleanly from this test's login-throttle interaction.
 
+## Fix applied and re-tested (2026-09-08, same day)
+
+Applied the two cheapest fixes and re-ran the identical test immediately
+after:
+
+- API Container App: `0.5 vCPU / 1Gi` → **`1.0 vCPU / 2Gi`**
+- Postgres: `Standard_B1ms` (1 vCore, Burstable) → **`Standard_B2s`**
+  (2 vCores, still Burstable — a ~2x cost step, not the much larger jump to
+  General Purpose)
+
+| Endpoint | p95 before | p95 after | Verdict |
+|---|---:|---:|---|
+| `GET /attendance/state` | 97ms | 62ms | pass |
+| `GET /tasks?scope=mine` | 105ms | 61ms | pass |
+| `GET /task-timers/daily-log` | 105ms | 60ms | pass |
+| `POST /attendance/clock-in` | 528ms | 586ms | **still fails** |
+| `POST /tasks` | 996ms | 561ms | **still fails** (much closer) |
+| `POST /task-timers/start` | 1017ms | 314ms | pass |
+| `POST /task-timers/stop` | 794ms | 219ms | pass |
+| `POST /attendance/clock-out` | 750ms | 473ms | pass |
+| `POST /auth/logout` | 347ms | 219ms | pass |
+
+**Honest read: real, substantial improvement, not a full fix.** 4 of 5
+write endpoints now pass; the two that create a new row (`clock-in` →
+new `AttendanceSession`, `tasks` → new `Task`) are the two still over
+target, `clock-in` marginally worse than before if anything. A plausible
+next hypothesis: BR-002's partial unique index (one active attendance
+session per user) adds constraint-check overhead specifically on INSERT
+that an UPDATE-only operation (like starting/stopping an existing timer)
+doesn't pay — untested, would need a targeted follow-up to confirm rather
+than assumed.
+
 ## Recommendation
 
-Not urgent for a single-user demo — genuinely worth fixing before onboarding
-a real organisation of employees who'd clock in around the same time each
-morning, which is exactly the load pattern that triggers this. Two
-independent, additive fixes, roughly in order of cost-effectiveness:
-
-1. Bump the API Container App's CPU/memory allocation (`infra/main.bicep`,
-   currently `cpu: 0.5, memory: 1Gi`) — cheapest fix, no architecture change.
-2. Move Postgres off `Standard_B1ms` (Burstable) to a `GeneralPurpose` tier
-   before real go-live — Burstable tiers throttle CPU once burst credits are
-   exhausted, which is consistent with write latency degrading under
-   sustained (not just instantaneous) concurrent load.
-
-Logged as RISK-007 in the tracker's Risks & Decisions sheet.
+Not urgent for a single-user demo. Before onboarding a real organisation
+with a shift-start clock-in spike, worth either investigating the INSERT-
+specific hypothesis above, or taking the next cost step (Postgres General
+Purpose tier) — see RISK-007 in the tracker for current status.
