@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LoginInput, loginSchema } from '@atms/shared';
@@ -11,10 +11,12 @@ import { api, ApiError } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const sessionExpired = searchParams.get('expired') === '1';
   const {
     register,
     handleSubmit,
@@ -35,6 +37,11 @@ export default function LoginPage() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <h2 className="text-lg font-medium text-slate-900">Sign in</h2>
+      {sessionExpired && !serverError && (
+        <p className="rounded-md bg-amber-50 p-2 text-sm text-amber-800">
+          Your session has expired. Please log in again.
+        </p>
+      )}
       {serverError && <p className="rounded-md bg-red-50 p-2 text-sm text-red-700">{serverError}</p>}
       <Field label="Email" error={errors.email?.message}>
         <Input type="email" autoComplete="email" {...register('email')} />
@@ -54,5 +61,13 @@ export default function LoginPage() {
         Sign in
       </Button>
     </form>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

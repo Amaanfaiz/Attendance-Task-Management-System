@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -34,10 +34,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const { data: user, isLoading, isError } = useCurrentUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // AC-001-007-04: a user redirected here after having been signed in (session
+  // expired mid-use) should see a clear reason, not the same blank login page
+  // as someone who was never signed in.
+  const wasAuthenticated = useRef(false);
+  if (user) wasAuthenticated.current = true;
 
   useEffect(() => {
     if (!isLoading && (isError || !user)) {
-      router.replace('/login');
+      router.replace(wasAuthenticated.current ? '/login?expired=1' : '/login');
     }
   }, [isLoading, isError, user, router]);
 
