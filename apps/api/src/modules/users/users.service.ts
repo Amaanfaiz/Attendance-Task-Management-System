@@ -18,6 +18,20 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/services/audit.service';
 import { AuthService } from '../auth/auth.service';
 
+// AC-002-006-01: employeeNumber is unique at the DB level (nullable+unique) but had no
+// pre-check like email does, so a duplicate fell through as an unhandled 500 instead of
+// a clean conflict response. Translates the underlying Prisma unique-constraint error
+// (P2002) into a proper ConflictException naming the actual field, rather than adding a
+// one-off pre-check per field.
+function rethrowAsConflict(err: unknown): never {
+  const prismaErr = err as { code?: string; meta?: { target?: string[] } };
+  if (prismaErr.code === 'P2002') {
+    const field = prismaErr.meta?.target?.[0] ?? 'field';
+    throw new ConflictException(`A user with this ${field} already exists`);
+  }
+  throw err;
+}
+
 const SELECT_SAFE_FIELDS = {
   id: true,
   firstName: true,
@@ -113,22 +127,24 @@ export class UsersService {
       },
     );
 
-    const user = await this.prisma.user.create({
-      data: {
-        firstName: input.firstName,
-        surname: input.surname,
-        email: input.email,
-        phoneNumber: input.phoneNumber,
-        role: input.role,
-        status: UserStatus.ACTIVE,
-        departmentId: input.departmentId,
-        employeeNumber: input.employeeNumber,
-        passwordHash: placeholderPasswordHash,
-        approvedById: actorId,
-        approvedAt: new Date(),
-      },
-      select: SELECT_SAFE_FIELDS,
-    });
+    const user = await this.prisma.user
+      .create({
+        data: {
+          firstName: input.firstName,
+          surname: input.surname,
+          email: input.email,
+          phoneNumber: input.phoneNumber,
+          role: input.role,
+          status: UserStatus.ACTIVE,
+          departmentId: input.departmentId,
+          employeeNumber: input.employeeNumber,
+          passwordHash: placeholderPasswordHash,
+          approvedById: actorId,
+          approvedAt: new Date(),
+        },
+        select: SELECT_SAFE_FIELDS,
+      })
+      .catch(rethrowAsConflict);
 
     await this.authService.createPasswordResetToken(user.id, user.email);
     await this.audit.record({
@@ -156,11 +172,13 @@ export class UsersService {
       if (existing) throw new ConflictException('Email already in use');
     }
 
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: input,
-      select: SELECT_SAFE_FIELDS,
-    });
+    const user = await this.prisma.user
+      .update({
+        where: { id: userId },
+        data: input,
+        select: SELECT_SAFE_FIELDS,
+      })
+      .catch(rethrowAsConflict);
 
     if (input.role && input.role !== before.role) {
       await this.audit.record({
