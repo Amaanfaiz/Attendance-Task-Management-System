@@ -1,10 +1,10 @@
 # Backup and Restore Policy
 
-Status: **policy defined, automation pending a provisioned production database**
-(tracker: US-012-005 / AC-012-005-01..04). This document is the target
-operational policy; the automated schedule itself is wired up as part of the
-Azure deployment (see [DEPLOYMENT.md](DEPLOYMENT.md)), once a managed
-Postgres instance exists to schedule backups against.
+Status: **live and drilled** (tracker: US-012-005 / AC-012-005-01..04).
+Automated backups are running against the production server
+(`atms-db-zh5xgcupqkpwy`, 14-day retention — see [DEPLOYMENT.md](DEPLOYMENT.md)),
+and the restore procedure below has been exercised end-to-end (see the drill
+log at the bottom of this file), not just documented.
 
 ## RPO / RTO targets (AC-012-005-04)
 
@@ -66,4 +66,4 @@ policy statement.
 
 | Date | Type | Verified by | Notes |
 |---|---|---|---|
-| _(none yet — first drill scheduled once the production database exists)_ | | | |
+| 2026-09-08 | Point-in-time restore drill (non-production) | Claude (AI Engineer) | Restored `atms-db-zh5xgcupqkpwy` to a new server (`atms-db-restoredrill0908`) via `az postgres flexible-server restore`. `prisma migrate status` confirmed schema match; spot-checked both seeded accounts (admin@atms.app, employee@atms.app) — present with correct roles and timestamps. ~8 minutes from restore command to verified. Drill instance discarded afterward per the non-production procedure above. |
