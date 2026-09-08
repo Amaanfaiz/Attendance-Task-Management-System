@@ -40,7 +40,7 @@ export default function AttendanceHistoryPage() {
       <h1 className="text-xl font-semibold text-slate-900">My Attendance History</h1>
       <Card>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Attendance history table">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">

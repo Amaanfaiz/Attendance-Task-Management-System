@@ -143,8 +143,11 @@ export default function UserManagementPage() {
 
       <Card>
         <div className="mb-3 flex items-center gap-2">
-          <label className="text-sm text-slate-600">Filter by status:</label>
+          <label htmlFor="status-filter" className="text-sm text-slate-600">
+            Filter by status:
+          </label>
           <select
+            id="status-filter"
             className="rounded-md border border-slate-300 px-2 py-1 text-sm"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -158,7 +161,7 @@ export default function UserManagementPage() {
           </select>
         </div>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Users table">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
@@ -180,6 +183,7 @@ export default function UserManagementPage() {
                   <td className="py-2 pr-4">
                     <select
                       className="rounded border border-slate-200 px-1 py-0.5 text-xs"
+                      aria-label={`Change role for ${u.firstName} ${u.surname}`}
                       value={u.role}
                       onChange={(e) => setRole.mutate({ id: u.id, role: e.target.value as UserRole })}
                     >
@@ -207,6 +211,7 @@ export default function UserManagementPage() {
                     ) : (
                       <select
                         className="rounded border border-slate-200 px-1 py-0.5 text-xs"
+                        aria-label={`Change status for ${u.firstName} ${u.surname}`}
                         value={u.status}
                         onChange={(e) => setStatus.mutate({ id: u.id, status: e.target.value as UserStatus })}
                       >

@@ -34,7 +34,7 @@ export default function AuditLogPage() {
           </Field>
         </div>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Audit log table">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">

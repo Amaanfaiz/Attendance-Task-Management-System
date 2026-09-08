@@ -255,7 +255,7 @@ export default function MyDayPage() {
                   {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
                 <span className="font-medium text-slate-800">{event.label}</span>
-                <span className="text-slate-400">
+                <span className="text-slate-500">
                   {event.end
                     ? `→ ${new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                     : '(ongoing)'}

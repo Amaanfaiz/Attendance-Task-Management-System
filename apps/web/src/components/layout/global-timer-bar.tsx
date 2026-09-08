@@ -13,7 +13,7 @@ export function GlobalTimerBar() {
 
   if (!data || data.state === 'CLOCKED_OUT') {
     return (
-      <div className="flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-500">
+      <div className="flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600">
         <Badge color="slate">Clocked out</Badge>
       </div>
     );
@@ -32,7 +32,7 @@ export function GlobalTimerBar() {
           {data.activeTimer.task.title} · {formatDuration(timerSeconds)}
         </span>
       ) : (
-        data.state === 'WORKING' && <span className="text-slate-500">No task timer running</span>
+        data.state === 'WORKING' && <span className="text-slate-600">No task timer running</span>
       )}
     </div>
   );

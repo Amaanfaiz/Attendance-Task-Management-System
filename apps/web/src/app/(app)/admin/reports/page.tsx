@@ -73,7 +73,12 @@ export default function ReportsPage() {
       <Card>
         <CardTitle>{REPORTS.find((r) => r.value === report)?.label}</CardTitle>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
-        <div className="overflow-x-auto">
+        <div
+          className="overflow-x-auto"
+          tabIndex={0}
+          role="region"
+          aria-label={`${REPORTS.find((r) => r.value === report)?.label} table`}
+        >
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">

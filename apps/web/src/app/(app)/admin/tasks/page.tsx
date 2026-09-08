@@ -101,8 +101,11 @@ export default function AdminTasksPage() {
 
       <Card>
         <div className="mb-3 flex items-center gap-2">
-          <label className="text-sm text-slate-600">Filter by status:</label>
+          <label htmlFor="task-status-filter" className="text-sm text-slate-600">
+            Filter by status:
+          </label>
           <select
+            id="task-status-filter"
             className="rounded-md border border-slate-300 px-2 py-1 text-sm"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -116,7 +119,7 @@ export default function AdminTasksPage() {
           </select>
         </div>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tasks table">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
