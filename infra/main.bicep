@@ -1,6 +1,16 @@
 // Provisions the production environment: Azure Container Registry, Azure Database
 // for PostgreSQL Flexible Server, a Container Apps environment, and two Container
 // Apps (api, web). Deploy with `az deployment group create` — see docs/DEPLOYMENT.md.
+//
+// CAUTION — do not blindly re-run this against an already-live environment: both
+// container apps' `image:` property below is hardcoded to the bootstrap placeholder
+// (see the comments on those resources). A full redeploy would reset a live site's
+// real images back to that placeholder. Monitoring resources (Application Insights,
+// the availability webtest, action group, alert rule — see bottom of file) were
+// applied directly via `az resource create` for exactly this reason, not through a
+// redeploy; they're declared here for documentation/IaC parity, not as something to
+// blindly `az deployment group create` again without first reviewing what it would
+// actually change.
 targetScope = 'resourceGroup'
 
 @description('Short project prefix used to name every resource, e.g. "atms".')
@@ -26,6 +36,9 @@ param jwtRefreshSecret string
 
 @description('Public URL of the web frontend, used for the API CORS allow-list.')
 param webOrigin string
+
+@description('Email address that receives downtime alerts (NFR-002).')
+param alertEmail string = 'amanfaiz0020@gmail.com'
 
 var acrName = replace('${namePrefix}acr${uniqueString(resourceGroup().id)}', '-', '')
 var dbServerName = '${namePrefix}-db-${uniqueString(resourceGroup().id)}'
@@ -208,6 +221,85 @@ resource webApp 'Microsoft.App/containerApps@2023-05-01' = {
       ]
       scale: { minReplicas: 1, maxReplicas: 3 }
     }
+  }
+}
+
+// --- Monitoring (NFR-002): Application Insights availability test on the API's
+// /api/v1/ready endpoint, checked from 5 global locations every 5 minutes, alerting
+// by email if 2+ locations report failure for 5+ minutes straight. Applied directly
+// via `az resource create` on 2026-09-08 (see the CAUTION note at the top of this
+// file) — declared here so the live config has a source-controlled record.
+
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: '${namePrefix}-appinsights'
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: logAnalytics.id
+  }
+}
+
+resource alertActionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
+  name: '${namePrefix}-alerts'
+  location: 'global'
+  properties: {
+    groupShortName: 'atmsalert'
+    enabled: true
+    emailReceivers: [
+      { name: 'owner', emailAddress: alertEmail, useCommonAlertSchema: false }
+    ]
+  }
+}
+
+resource apiAvailabilityTest 'Microsoft.Insights/webtests@2022-06-15' = {
+  name: '${namePrefix}-api-ready'
+  location: location
+  kind: 'ping'
+  tags: {
+    'hidden-link:${appInsights.id}': 'Resource'
+  }
+  properties: {
+    SyntheticMonitorId: '${namePrefix}-api-ready'
+    Name: '${namePrefix}-api-ready'
+    Description: 'Pings the API\'s /api/v1/ready endpoint, which checks real DB connectivity.'
+    Enabled: true
+    Frequency: 300
+    Timeout: 30
+    Kind: 'ping'
+    RetryEnabled: true
+    Locations: [
+      { Id: 'us-tx-sn1-azr' }
+      { Id: 'us-il-ch1-azr' }
+      { Id: 'us-ca-sjc-azr' }
+      { Id: 'us-va-ash-azr' }
+      { Id: 'us-fl-mia-edge' }
+    ]
+    Configuration: {
+      WebTest: '<WebTest Name="${namePrefix}-api-ready" Enabled="True" Timeout="30" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Items><Request Method="GET" Guid="4347da77-4702-4979-b848-45e0067f6eb0" Version="1.1" Url="https://${apiApp.properties.configuration.ingress.fqdn}/api/v1/ready" ThinkTime="0" Timeout="30" ParseDependentRequests="False" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200" ExpectedResponseUrl="" ReportingName="" IgnoreHttpStatusCode="False" /></Items></WebTest>'
+    }
+  }
+}
+
+resource apiDownAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: '${namePrefix}-api-down-alert'
+  location: 'global'
+  properties: {
+    severity: 1
+    enabled: true
+    scopes: [apiAvailabilityTest.id, appInsights.id]
+    evaluationFrequency: 'PT1M'
+    windowSize: 'PT5M'
+    description: 'Fires when the API\'s /api/v1/ready check fails from more than 2 of 5 test locations.'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.WebtestLocationAvailabilityCriteria'
+      webTestId: apiAvailabilityTest.id
+      componentId: appInsights.id
+      failedLocationCount: 2
+    }
+    actions: [
+      { actionGroupId: alertActionGroup.id }
+    ]
   }
 }
 
