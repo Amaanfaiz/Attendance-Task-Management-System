@@ -221,13 +221,22 @@ export class CorrectionsService {
       request.targetType as CorrectionTargetType,
       request.targetId,
     );
-    if (request.proposedStart && request.proposedEnd) {
+    // AC-009-003-04/AC-009-004-03: a correction that only proposes one of
+    // start/end (the common case - "I forgot to stop my timer") was skipping
+    // the overlap check entirely, since it only ran when BOTH proposedStart
+    // and proposedEnd were set on the request itself. Found live: approving
+    // an end-only correction that genuinely overlapped a later real segment
+    // went through with no error. Fall back to the record's own unchanged
+    // boundary first, matching adminDirectCorrection's already-correct logic.
+    const effectiveStart = request.proposedStart ?? before.start;
+    const effectiveEnd = request.proposedEnd ?? before.end;
+    if (effectiveStart && effectiveEnd) {
       await this.assertNoOverlap(
         request.targetType as CorrectionTargetType,
         request.targetId,
         before.userId,
-        request.proposedStart,
-        request.proposedEnd,
+        effectiveStart,
+        effectiveEnd,
       );
     }
     await this.applyCorrection(
