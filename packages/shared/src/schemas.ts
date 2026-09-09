@@ -1,6 +1,22 @@
 import { z } from 'zod';
 import { TaskPriority, UserRole, UserStatus } from './enums';
 
+// An HTML <select> bound to an optional UUID field (e.g. "Unassigned"/"None") submits
+// an empty string, not undefined - z.string().uuid().optional() rejects that empty
+// string (optional() only lets undefined through), so the field fails validation with
+// no visible error tied to it, and the whole form silently does nothing on submit.
+// Found live: creating a user without picking a department, or a task without picking
+// an assignee, both failed this way. This preprocesses "" to undefined first so the
+// rest of the validation behaves the way an optional field actually should.
+const optionalUuid = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().uuid().optional(),
+);
+const optionalNullableUuid = z.preprocess(
+  (val) => (val === '' ? null : val),
+  z.string().uuid().nullable().optional(),
+);
+
 // Shared minimum password policy — enforced identically client- and server-side (AC-001-001-03).
 export const passwordSchema = z
   .string()
@@ -47,7 +63,7 @@ export const createTaskSchema = z.object({
   priority: z.nativeEnum(TaskPriority).default(TaskPriority.MEDIUM),
   dueDate: z.string().datetime().optional(),
   estimatedMinutes: z.number().int().positive().optional(),
-  assigneeId: z.string().uuid().optional(),
+  assigneeId: optionalUuid,
 });
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
@@ -87,7 +103,7 @@ export const adminCreateUserSchema = z.object({
   email: z.string().email(),
   phoneNumber: z.string().min(1).max(30),
   role: z.nativeEnum(UserRole).default(UserRole.EMPLOYEE),
-  departmentId: z.string().uuid().optional(),
+  departmentId: optionalUuid,
   employeeNumber: z.string().max(50).optional(),
 });
 export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
@@ -99,7 +115,7 @@ export const adminUpdateUserSchema = z.object({
   phoneNumber: z.string().min(1).max(30).optional(),
   role: z.nativeEnum(UserRole).optional(),
   status: z.nativeEnum(UserStatus).optional(),
-  departmentId: z.string().uuid().nullable().optional(),
+  departmentId: optionalNullableUuid,
   employeeNumber: z.string().max(50).nullable().optional(),
 });
 export type AdminUpdateUserInput = z.infer<typeof adminUpdateUserSchema>;

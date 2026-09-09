@@ -123,7 +123,7 @@ function UserManagementPageInner() {
                   ))}
                 </select>
               </Field>
-              <Field label="Department">
+              <Field label="Department" error={errors.departmentId?.message}>
                 <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" {...register('departmentId')}>
                   <option value="">None</option>
                   {(departments ?? []).map((d) => (
@@ -135,8 +135,8 @@ function UserManagementPageInner() {
               </Field>
             </div>
             <p className="text-xs text-slate-500">
-              A password-setup link will be generated for the new user (logged server-side until an email provider is
-              configured).
+              A password-setup link will be emailed to the new user (falls back to the server log if email isn&rsquo;t
+              configured or fails to send).
             </p>
             <Button type="submit" loading={isSubmitting}>
               Create

@@ -89,7 +89,7 @@ function AdminTasksPageInner() {
                   ))}
                 </select>
               </Field>
-              <Field label="Assignee">
+              <Field label="Assignee" error={errors.assigneeId?.message}>
                 <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" {...register('assigneeId')}>
                   <option value="">Unassigned</option>
                   {(users ?? []).map((u) => (
