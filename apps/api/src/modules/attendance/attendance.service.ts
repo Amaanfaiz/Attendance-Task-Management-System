@@ -8,6 +8,7 @@ import {
   AttendanceSessionStatus,
   BreakRecordStatus,
   TaskTimeEntryStatus,
+  UserStatus,
   getUtcDayRange,
 } from '@atms/shared';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -185,6 +186,9 @@ export class AttendanceService {
   }
 
   // US-003-008: admin live list of who is currently clocked in / on break.
+  // AC-008-003-03: a user deactivated/suspended after clocking in still has an
+  // open session (deactivation doesn't retroactively close it) - found live,
+  // this was leaking a stale "Working" row for an INACTIVE test account.
   async getLive() {
     const sessions = await this.prisma.attendanceSession.findMany({
       where: {
@@ -194,6 +198,7 @@ export class AttendanceService {
             AttendanceSessionStatus.ON_BREAK,
           ],
         },
+        user: { status: UserStatus.ACTIVE },
       },
       include: {
         // AC-008-003-04: department name (not just id) needed so the live table can
