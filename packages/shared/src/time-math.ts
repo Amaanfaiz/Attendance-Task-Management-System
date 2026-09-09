@@ -11,6 +11,24 @@ function overlapMinutes(a: Interval, bStart: Date, bEnd: Date): number {
   return ms > 0 ? ms / 60000 : 0;
 }
 
+/**
+ * AC-004-003-03 / BR-008's other half: the same eligible-break-time figure
+ * calculateNetWorkingMinutes subtracts, but returned on its own rather than
+ * discarded — reports.service.ts's admin attendance report already computes
+ * this independently and exposes it; the employee-facing reconciliation
+ * endpoint (My Day) never did, so there was nowhere in the product a user
+ * could see "your total break time today," found via live AC testing.
+ */
+export function calculateBreakMinutes(
+  attendance: Interval,
+  breaks: Interval[],
+): number {
+  return breaks.reduce((sum, b) => {
+    const bEnd = b.end ?? new Date();
+    return sum + overlapMinutes(attendance, b.start, bEnd);
+  }, 0);
+}
+
 /** BR-008: Net working time = attendance elapsed time - eligible completed break time. */
 export function calculateNetWorkingMinutes(
   attendance: Interval,
@@ -21,10 +39,7 @@ export function calculateNetWorkingMinutes(
     0,
     (attendanceEnd.getTime() - attendance.start.getTime()) / 60000,
   );
-  const breakMinutes = breaks.reduce((sum, b) => {
-    const bEnd = b.end ?? new Date();
-    return sum + overlapMinutes(attendance, b.start, bEnd);
-  }, 0);
+  const breakMinutes = calculateBreakMinutes(attendance, breaks);
   return Math.max(0, grossMinutes - breakMinutes);
 }
 
@@ -40,6 +55,7 @@ export function calculateTaskMinutes(segments: Interval[]): number {
 export interface ReconciliationResult {
   netWorkingMinutes: number;
   taskMinutes: number;
+  breakMinutes: number;
   unallocatedMinutes: number;
   hasDataQualityException: boolean;
 }
@@ -52,10 +68,12 @@ export function reconcile(
 ): ReconciliationResult {
   const netWorkingMinutes = calculateNetWorkingMinutes(attendance, breaks);
   const taskMinutes = calculateTaskMinutes(taskSegments);
+  const breakMinutes = calculateBreakMinutes(attendance, breaks);
   const rawUnallocated = netWorkingMinutes - taskMinutes;
   return {
     netWorkingMinutes,
     taskMinutes,
+    breakMinutes,
     unallocatedMinutes: Math.max(0, rawUnallocated),
     hasDataQualityException: rawUnallocated < -0.01,
   };

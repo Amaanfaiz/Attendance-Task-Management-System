@@ -31,6 +31,7 @@ export class ReconciliationService {
 
     let netWorkingMinutes = 0;
     let taskMinutes = 0;
+    let breakMinutes = 0;
     let unallocatedMinutes = 0;
     let hasDataQualityException = false;
     const timeline: TimelineEvent[] = [];
@@ -56,6 +57,7 @@ export class ReconciliationService {
       );
       netWorkingMinutes += result.netWorkingMinutes;
       taskMinutes += result.taskMinutes;
+      breakMinutes += result.breakMinutes;
       unallocatedMinutes += result.unallocatedMinutes;
       hasDataQualityException =
         hasDataQualityException || result.hasDataQualityException;
@@ -90,6 +92,7 @@ export class ReconciliationService {
       date,
       netWorkingMinutes: Math.round(netWorkingMinutes),
       taskMinutes: Math.round(taskMinutes),
+      breakMinutes: Math.round(breakMinutes),
       unallocatedMinutes: Math.round(unallocatedMinutes),
       hasDataQualityException,
       timeline,

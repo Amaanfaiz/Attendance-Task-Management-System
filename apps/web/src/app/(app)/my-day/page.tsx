@@ -175,9 +175,10 @@ export default function MyDayPage() {
 
       <Card>
         <CardTitle>Today&apos;s Totals</CardTitle>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <Stat label="Worked" value={summary ? formatMinutes(summary.netWorkingMinutes) : '—'} />
           <Stat label="Task time" value={summary ? formatMinutes(summary.taskMinutes) : '—'} />
+          <Stat label="Break time" value={summary ? formatMinutes(summary.breakMinutes) : '—'} />
           <Stat
             label="Unallocated"
             value={summary ? formatMinutes(summary.unallocatedMinutes) : '—'}

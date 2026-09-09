@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateNetWorkingMinutes, calculateTaskMinutes, reconcile } from './time-math';
+import { calculateBreakMinutes, calculateNetWorkingMinutes, calculateTaskMinutes, reconcile } from './time-math';
 
 describe('calculateNetWorkingMinutes (BR-008)', () => {
   it('subtracts completed break time from gross attendance', () => {
@@ -19,6 +19,27 @@ describe('calculateNetWorkingMinutes (BR-008)', () => {
     const minutes = calculateNetWorkingMinutes({ start, end: null }, []);
     expect(minutes).toBeGreaterThanOrEqual(9.9);
     expect(minutes).toBeLessThanOrEqual(10.1);
+  });
+});
+
+describe('calculateBreakMinutes (AC-004-003-03)', () => {
+  it('sums completed break durations within the attendance window', () => {
+    const attendance = { start: new Date('2026-01-01T09:00:00Z'), end: new Date('2026-01-01T17:30:00Z') };
+    const breaks = [
+      { start: new Date('2026-01-01T11:00:00Z'), end: new Date('2026-01-01T11:15:00Z') },
+      { start: new Date('2026-01-01T14:00:00Z'), end: new Date('2026-01-01T14:30:00Z') },
+    ];
+    expect(calculateBreakMinutes(attendance, breaks)).toBeCloseTo(45, 5); // 15m + 30m
+  });
+
+  it('is exactly the figure calculateNetWorkingMinutes subtracts, not a separate calculation', () => {
+    const attendance = { start: new Date('2026-01-01T09:00:00Z'), end: new Date('2026-01-01T17:30:00Z') };
+    const breaks = [{ start: new Date('2026-01-01T12:00:00Z'), end: new Date('2026-01-01T12:45:00Z') }];
+    const grossMinutes = 510; // 8h30m
+    expect(calculateNetWorkingMinutes(attendance, breaks)).toBeCloseTo(
+      grossMinutes - calculateBreakMinutes(attendance, breaks),
+      5,
+    );
   });
 });
 

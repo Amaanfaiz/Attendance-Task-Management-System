@@ -14,6 +14,7 @@ export interface DailySummary {
   date: string;
   netWorkingMinutes: number;
   taskMinutes: number;
+  breakMinutes: number;
   unallocatedMinutes: number;
   hasDataQualityException: boolean;
   timeline: TimelineEvent[];
