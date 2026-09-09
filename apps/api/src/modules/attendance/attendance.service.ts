@@ -196,6 +196,8 @@ export class AttendanceService {
         },
       },
       include: {
+        // AC-008-003-04: department name (not just id) needed so the live table can
+        // actually filter/display by department, not just carry an opaque FK.
         user: {
           select: {
             id: true,
@@ -203,6 +205,7 @@ export class AttendanceService {
             surname: true,
             email: true,
             departmentId: true,
+            department: { select: { id: true, name: true } },
           },
         },
       },
