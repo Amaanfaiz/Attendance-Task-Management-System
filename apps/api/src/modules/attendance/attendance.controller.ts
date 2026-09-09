@@ -64,4 +64,17 @@ export class AttendanceController {
   getLive() {
     return this.attendanceService.getLive();
   }
+
+  // US-009-004: lets an admin look up a specific user's own records (sessions,
+  // breaks, task time entries) to select one for a direct correction - without
+  // this, there was no way to discover another user's record ids at all.
+  @Roles(UserRole.ADMINISTRATOR)
+  @Get('admin/history')
+  getAdminHistory(
+    @Query('userId') userId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.attendanceService.getMyHistory(userId, from, to);
+  }
 }

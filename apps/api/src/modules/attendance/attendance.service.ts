@@ -163,7 +163,14 @@ export class AttendanceService {
           lte: to ? new Date(getUtcDayRange(to).end.getTime() - 1) : undefined,
         },
       },
-      include: { breaks: true },
+      include: {
+        breaks: true,
+        // AC-009-003-01: US-009-003 (request a task-time correction) had no
+        // frontend at all - this is what lets the corrections page offer the
+        // user's own task-time entries to pick from, not just attendance
+        // sessions.
+        taskTimeEntries: { include: { task: { select: { title: true } } } },
+      },
       orderBy: { clockInAt: 'desc' },
     });
   }
