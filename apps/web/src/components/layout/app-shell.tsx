@@ -100,8 +100,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white p-4 md:flex">
+    // AC-008-005-03: was min-h-screen, so the container could grow taller than
+    // the viewport and <main>'s own overflow-y-auto never engaged - the whole
+    // page scrolled instead, dragging the header (and its timer/clock state)
+    // out of view. h-screen bounds it so main scrolls internally and the
+    // header stays fixed, as the AC requires.
+    <div className="flex h-screen">
+      <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 md:flex">
         <div className="mb-6 px-2 text-lg font-semibold text-slate-900">ATMS</div>
         <nav className="flex flex-1 flex-col gap-1">{links.map(navLink)}</nav>
         <div className="border-t border-slate-200 pt-3 text-sm">
