@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreateTaskInput, TaskPriority, createTaskSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useMyTasks } from '@/lib/use-tasks';
@@ -25,6 +25,14 @@ export default function TasksPage() {
   const { data: tasks, isLoading } = useMyTasks();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  // AC-005-002-01: the org setting already blocked creation server-side (403),
+  // but the button/form here were shown unconditionally regardless of it,
+  // letting an employee fill out a form that could only ever fail.
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => api.get<{ employeesCanCreateTasks: boolean }>('/settings'),
+  });
+  const canCreate = settings?.employeesCanCreateTasks ?? false;
   const {
     register,
     handleSubmit,
@@ -57,12 +65,20 @@ export default function TasksPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-900">My Tasks</h1>
-        <Button variant="secondary" onClick={() => setShowCreate((v) => !v)}>
-          {showCreate ? 'Cancel' : 'New Task'}
-        </Button>
+        {canCreate && (
+          <Button variant="secondary" onClick={() => setShowCreate((v) => !v)}>
+            {showCreate ? 'Cancel' : 'New Task'}
+          </Button>
+        )}
       </div>
 
-      {showCreate && (
+      {!canCreate && settings && (
+        <p className="text-sm text-slate-500">
+          Your organisation currently only allows administrators to create tasks.
+        </p>
+      )}
+
+      {showCreate && canCreate && (
         <Card>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
             {error && <p className="rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p>}
@@ -86,6 +102,9 @@ export default function TasksPage() {
                 <Input type="number" {...register('estimatedMinutes', { valueAsNumber: true })} />
               </Field>
             </div>
+            <Field label="Due date" error={errors.dueDate?.message}>
+              <Input type="date" {...register('dueDate')} />
+            </Field>
             <Button type="submit" loading={isSubmitting}>
               Create Task
             </Button>
