@@ -12,6 +12,8 @@ interface CorrectionRow {
   targetId: string;
   proposedStart: string | null;
   proposedEnd: string | null;
+  currentStart: string | null;
+  currentEnd: string | null;
   reason: string;
   requestedBy: { firstName: string; surname: string };
   createdAt: string;
@@ -48,9 +50,28 @@ export default function AdminCorrectionsPage() {
                 <span className="text-xs text-slate-500">{new Date(c.createdAt).toLocaleString()}</span>
               </div>
               <p className="mb-2 text-sm text-slate-600">{c.reason}</p>
+              {/* AC-009-002-01: current value shown next to the proposal, not just the proposal alone. */}
               <div className="mb-3 grid grid-cols-2 gap-3 text-xs text-slate-500">
-                {c.proposedStart && <span>Proposed start: {new Date(c.proposedStart).toLocaleString()}</span>}
-                {c.proposedEnd && <span>Proposed end: {new Date(c.proposedEnd).toLocaleString()}</span>}
+                <span>
+                  Current start: {c.currentStart ? new Date(c.currentStart).toLocaleString() : '—'}
+                </span>
+                <span>
+                  Proposed start:{' '}
+                  {c.proposedStart ? (
+                    <span className="font-medium text-slate-900">{new Date(c.proposedStart).toLocaleString()}</span>
+                  ) : (
+                    '(unchanged)'
+                  )}
+                </span>
+                <span>Current end: {c.currentEnd ? new Date(c.currentEnd).toLocaleString() : '—'}</span>
+                <span>
+                  Proposed end:{' '}
+                  {c.proposedEnd ? (
+                    <span className="font-medium text-slate-900">{new Date(c.proposedEnd).toLocaleString()}</span>
+                  ) : (
+                    '(unchanged)'
+                  )}
+                </span>
               </div>
               <div className="flex gap-2">
                 <Button onClick={() => decide.mutate({ id: c.id, approve: true })} loading={decide.isPending}>

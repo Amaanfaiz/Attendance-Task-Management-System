@@ -148,14 +148,31 @@ export class CorrectionsService {
     return request;
   }
 
+  // AC-009-002-01: the admin must see the record's *current* value next to what's
+  // proposed, not just the proposal - found via live AC testing that the pending-list
+  // response (and the review page built on it) only ever carried proposedStart/End,
+  // with nowhere to see what's actually being changed from.
   async listPending() {
-    return this.prisma.correctionRequest.findMany({
+    const requests = await this.prisma.correctionRequest.findMany({
       where: { status: CorrectionStatus.PENDING },
       include: {
         requestedBy: { select: { id: true, firstName: true, surname: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
+    return Promise.all(
+      requests.map(async (r) => {
+        const current = await this.getTargetOwnerAndInterval(
+          r.targetType as CorrectionTargetType,
+          r.targetId,
+        ).catch(() => null); // target may have since been deleted/altered - degrade gracefully
+        return {
+          ...r,
+          currentStart: current?.start ?? null,
+          currentEnd: current?.end ?? null,
+        };
+      }),
+    );
   }
 
   async listMine(userId: string) {
