@@ -100,9 +100,29 @@ export class TasksService {
     return task;
   }
 
+  // AC-005-008-03: the list views never carried actualMinutes at all (only the
+  // single-task detail endpoint computed it) - batch it in one query per list
+  // call instead of one query per task.
+  private async attachActualMinutes<T extends { id: string }>(tasks: T[]) {
+    if (tasks.length === 0) return tasks as (T & { actualMinutes: number })[];
+    const entries = await this.prisma.taskTimeEntry.findMany({
+      where: { taskId: { in: tasks.map((t) => t.id) } },
+    });
+    const totals = new Map<string, number>();
+    for (const e of entries) {
+      const end = e.endAt ?? new Date();
+      const ms = Math.max(0, end.getTime() - e.startAt.getTime());
+      totals.set(e.taskId, (totals.get(e.taskId) ?? 0) + ms);
+    }
+    return tasks.map((t) => ({
+      ...t,
+      actualMinutes: Math.round((totals.get(t.id) ?? 0) / 60000),
+    }));
+  }
+
   // AC-005-008-01/02: employee list defaults to their own active tasks, filterable.
   async listForUser(userId: string, status?: string, priority?: string) {
-    return this.prisma.task.findMany({
+    const tasks = await this.prisma.task.findMany({
       where: {
         assigneeId: userId,
         status: status
@@ -112,6 +132,7 @@ export class TasksService {
       },
       orderBy: [{ priority: 'desc' }, { dueDate: 'asc' }],
     });
+    return this.attachActualMinutes(tasks);
   }
 
   async listAll(filters: {
@@ -119,7 +140,7 @@ export class TasksService {
     priority?: string;
     assigneeId?: string;
   }) {
-    return this.prisma.task.findMany({
+    const tasks = await this.prisma.task.findMany({
       where: {
         status: filters.status as never,
         priority: filters.priority as never,
@@ -130,6 +151,7 @@ export class TasksService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    return this.attachActualMinutes(tasks);
   }
 
   // Employees may only change status on their own tasks; every other field is admin-only

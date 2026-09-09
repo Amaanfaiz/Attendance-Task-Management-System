@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CreateTaskInput, TaskPriority, createTaskSchema } from '@atms/shared';
+import { CreateTaskInput, TaskPriority, TaskStatus, createTaskSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useMyTasks } from '@/lib/use-tasks';
+import { formatMinutes } from '@/lib/use-reconciliation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
@@ -22,7 +23,11 @@ const priorityColor: Record<TaskPriority, 'slate' | 'amber' | 'red' | 'blue'> = 
 
 export default function TasksPage() {
   const [showCreate, setShowCreate] = useState(false);
-  const { data: tasks, isLoading } = useMyTasks();
+  // AC-005-004-03/AC-005-008-02: the backend already accepted status/priority
+  // filters on GET /tasks, but this page never exposed either one.
+  const [statusFilter, setStatusFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
+  const { data: tasks, isLoading } = useMyTasks(statusFilter || undefined, priorityFilter || undefined);
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   // AC-005-002-01: the org setting already blocked creation server-side (403),
@@ -113,6 +118,38 @@ export default function TasksPage() {
       )}
 
       <Card>
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <label className="text-sm text-slate-600">
+            Status:{' '}
+            <select
+              className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">Active (default)</option>
+              {Object.values(TaskStatus).map((s) => (
+                <option key={s} value={s}>
+                  {s.replace('_', ' ')}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm text-slate-600">
+            Priority:{' '}
+            <select
+              className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+            >
+              <option value="">All</option>
+              {Object.values(TaskPriority).map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
         <ul className="divide-y divide-slate-100">
           {(tasks ?? []).map((task) => (
@@ -123,6 +160,7 @@ export default function TasksPage() {
                   <p className="text-xs text-slate-500">
                     {task.status.replace('_', ' ')}
                     {task.dueDate ? ` · due ${new Date(task.dueDate).toLocaleDateString()}` : ''}
+                    {` · ${formatMinutes(task.actualMinutes)} logged`}
                   </p>
                 </div>
                 <Badge color={priorityColor[task.priority]}>{task.priority}</Badge>

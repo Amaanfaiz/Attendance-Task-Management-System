@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreateTaskInput, TaskPriority, TaskStatus, UserStatus, createTaskSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useAllTasks } from '@/lib/use-tasks';
+import { formatMinutes } from '@/lib/use-reconciliation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
@@ -28,11 +29,17 @@ function AdminTasksPageInner() {
   const searchParams = useSearchParams();
   const [showCreate, setShowCreate] = useState(false);
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') ?? '');
+  const [priorityFilter, setPriorityFilter] = useState('');
   const overdueOnly = searchParams.get('overdue') === '1';
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: allTasks, isLoading } = useAllTasks(statusFilter ? { status: statusFilter } : {});
+  // AC-005-004-03: the backend already accepted a priority filter here too,
+  // but this page only ever exposed the status one.
+  const { data: allTasks, isLoading } = useAllTasks({
+    ...(statusFilter ? { status: statusFilter } : {}),
+    ...(priorityFilter ? { priority: priorityFilter } : {}),
+  });
   const tasks = overdueOnly
     ? (allTasks ?? []).filter(
         (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'COMPLETED' && t.status !== 'CANCELLED',
@@ -131,6 +138,22 @@ function AdminTasksPageInner() {
               </option>
             ))}
           </select>
+          <label htmlFor="task-priority-filter" className="text-sm text-slate-600">
+            Filter by priority:
+          </label>
+          <select
+            id="task-priority-filter"
+            className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+          >
+            <option value="">All</option>
+            {Object.values(TaskPriority).map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
           {overdueOnly && (
             <Badge color="red">Overdue only (from dashboard)</Badge>
           )}
@@ -145,6 +168,7 @@ function AdminTasksPageInner() {
                 <th className="py-2 pr-4">Priority</th>
                 <th className="py-2 pr-4">Status</th>
                 <th className="py-2 pr-4">Due</th>
+                <th className="py-2 pr-4">Actual time</th>
               </tr>
             </thead>
             <tbody>
@@ -163,6 +187,7 @@ function AdminTasksPageInner() {
                   </td>
                   <td className="py-2 pr-4">{t.status.replace('_', ' ')}</td>
                   <td className="py-2 pr-4">{t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '—'}</td>
+                  <td className="py-2 pr-4">{formatMinutes(t.actualMinutes)}</td>
                 </tr>
               ))}
             </tbody>

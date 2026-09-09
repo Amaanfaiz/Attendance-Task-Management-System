@@ -15,6 +15,7 @@ export interface TaskRow {
   assigneeId: string | null;
   createdById: string;
   assignee?: { id: string; firstName: string; surname: string } | null;
+  actualMinutes: number;
 }
 
 export function useMyTasks(status?: string, priority?: string) {
