@@ -4,8 +4,14 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { useDepartments } from '@/lib/use-departments';
+import { formatMinutes } from '@/lib/use-reconciliation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+
+function durationSince(clockInAt: string): string {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(clockInAt).getTime()) / 60000));
+  return formatMinutes(minutes);
+}
 
 interface LiveRow {
   id: string;
@@ -79,6 +85,7 @@ export default function LiveAttendancePage() {
                 <th className="py-2 pr-4">Department</th>
                 <th className="py-2 pr-4">Status</th>
                 <th className="py-2 pr-4">Clocked in since</th>
+                <th className="py-2 pr-4">Duration</th>
                 <th className="py-2 pr-4">Current task</th>
               </tr>
             </thead>
@@ -93,12 +100,13 @@ export default function LiveAttendancePage() {
                     {row.status === 'ON_BREAK' ? <Badge color="amber">On Break</Badge> : <Badge color="green">Working</Badge>}
                   </td>
                   <td className="py-2 pr-4">{new Date(row.clockInAt).toLocaleTimeString()}</td>
+                  <td className="py-2 pr-4">{durationSince(row.clockInAt)}</td>
                   <td className="py-2 pr-4">{row.currentTask?.task.title ?? '—'}</td>
                 </tr>
               ))}
               {data && rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-4 text-center text-slate-500">
+                  <td colSpan={6} className="py-4 text-center text-slate-500">
                     {data.length === 0 ? 'Nobody is currently clocked in.' : 'No one matches this search/filter.'}
                   </td>
                 </tr>
