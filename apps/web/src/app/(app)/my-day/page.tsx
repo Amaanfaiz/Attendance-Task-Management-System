@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { TaskStatus } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useAttendanceState } from '@/lib/use-attendance-state';
-import { useReconciliation, formatMinutes, todayIso } from '@/lib/use-reconciliation';
+import { useReconciliation, formatMinutes, todayIso, computeTimelineGaps } from '@/lib/use-reconciliation';
 import { useMyTasks } from '@/lib/use-tasks';
 import { useElapsedSeconds, formatDuration } from '@/lib/use-elapsed';
 import { Card, CardTitle } from '@/components/ui/card';
@@ -244,25 +244,35 @@ export default function MyDayPage() {
           <p className="text-sm text-slate-500">No activity recorded yet today.</p>
         ) : (
           <ul className="space-y-2">
-            {summary.timeline.map((event, idx) => (
-              <li key={idx} className="flex items-center gap-3 text-sm">
-                <span
-                  className={
-                    'h-2 w-2 rounded-full ' +
-                    (event.type === 'ATTENDANCE' ? 'bg-green-500' : event.type === 'BREAK' ? 'bg-amber-500' : 'bg-blue-500')
-                  }
-                />
-                <span className="w-16 shrink-0 text-slate-500">
-                  {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-                <span className="font-medium text-slate-800">{event.label}</span>
-                <span className="text-slate-500">
-                  {event.end
-                    ? `→ ${new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                    : '(ongoing)'}
-                </span>
-              </li>
-            ))}
+            {[...summary.timeline, ...computeTimelineGaps(summary.timeline)]
+              .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+              .map((event, idx) => (
+                <li key={idx} className="flex items-center gap-3 text-sm">
+                  <span
+                    className={
+                      'h-2 w-2 rounded-full ' +
+                      (event.type === 'ATTENDANCE'
+                        ? 'bg-green-500'
+                        : event.type === 'BREAK'
+                          ? 'bg-amber-500'
+                          : event.type === 'UNALLOCATED'
+                            ? 'border border-dashed border-slate-400 bg-transparent'
+                            : 'bg-blue-500')
+                    }
+                  />
+                  <span className="w-16 shrink-0 text-slate-500">
+                    {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span className={event.type === 'UNALLOCATED' ? 'font-medium italic text-slate-500' : 'font-medium text-slate-800'}>
+                    {event.label}
+                  </span>
+                  <span className="text-slate-500">
+                    {event.end
+                      ? `→ ${new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                      : '(ongoing)'}
+                  </span>
+                </li>
+              ))}
           </ul>
         )}
       </Card>
