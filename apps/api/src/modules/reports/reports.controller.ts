@@ -41,7 +41,12 @@ export class ReportsController {
     to: string,
     rows: Record<string, unknown>[],
   ) {
-    if (format === 'csv') return sendCsv(res, filename, rows);
+    if (format === 'csv')
+      return sendCsv(res, filename, rows, {
+        title,
+        periodFrom: from,
+        periodTo: to,
+      });
     if (format === 'xlsx')
       return sendXlsx(res, filename, rows, {
         title,
