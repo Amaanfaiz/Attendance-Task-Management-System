@@ -66,6 +66,16 @@ export class UsersService {
     return user;
   }
 
+  // SCR-013 User Detail: admin-only lookup of any single user by id.
+  async findById(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: SELECT_SAFE_FIELDS,
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
   // AC-002-003-02: role/status/department are administrator-only and never accepted here.
   async updateOwnProfile(userId: string, input: UpdateOwnProfileInput) {
     const user = await this.prisma.user.update({

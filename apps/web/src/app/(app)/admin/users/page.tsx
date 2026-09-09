@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -134,6 +135,9 @@ function UserManagementPageInner() {
                 </select>
               </Field>
             </div>
+            <Field label="Employee number" error={errors.employeeNumber?.message}>
+              <Input placeholder="Leave blank if unused" {...register('employeeNumber')} />
+            </Field>
             <p className="text-xs text-slate-500">
               A password-setup link will be emailed to the new user (falls back to the server log if email isn&rsquo;t
               configured or fails to send).
@@ -181,7 +185,9 @@ function UserManagementPageInner() {
               {(users ?? []).map((u) => (
                 <tr key={u.id} className="border-b border-slate-100">
                   <td className="py-2 pr-4">
-                    {u.firstName} {u.surname}
+                    <Link href={`/admin/users/${u.id}`} className="text-slate-900 hover:underline">
+                      {u.firstName} {u.surname}
+                    </Link>
                   </td>
                   <td className="py-2 pr-4">{u.email}</td>
                   <td className="py-2 pr-4">

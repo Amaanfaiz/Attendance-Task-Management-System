@@ -17,6 +17,20 @@ const optionalNullableUuid = z.preprocess(
   z.string().uuid().nullable().optional(),
 );
 
+// Same empty-string problem for a plain optional text field like employeeNumber:
+// "" and "" collide under a DB unique constraint (unlike two NULLs, which never
+// conflict each other), so a blank field must become null/undefined, not "".
+const optionalTrimmedString = (max: number) =>
+  z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+    z.string().max(max).optional(),
+  );
+const optionalNullableTrimmedString = (max: number) =>
+  z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
+    z.string().max(max).nullable().optional(),
+  );
+
 // Shared minimum password policy — enforced identically client- and server-side (AC-001-001-03).
 export const passwordSchema = z
   .string()
@@ -104,7 +118,7 @@ export const adminCreateUserSchema = z.object({
   phoneNumber: z.string().min(1).max(30),
   role: z.nativeEnum(UserRole).default(UserRole.EMPLOYEE),
   departmentId: optionalUuid,
-  employeeNumber: z.string().max(50).optional(),
+  employeeNumber: optionalTrimmedString(50),
 });
 export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
 
@@ -116,7 +130,7 @@ export const adminUpdateUserSchema = z.object({
   role: z.nativeEnum(UserRole).optional(),
   status: z.nativeEnum(UserStatus).optional(),
   departmentId: optionalNullableUuid,
-  employeeNumber: z.string().max(50).nullable().optional(),
+  employeeNumber: optionalNullableTrimmedString(50),
 });
 export type AdminUpdateUserInput = z.infer<typeof adminUpdateUserSchema>;
 

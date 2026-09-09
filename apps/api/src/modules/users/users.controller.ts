@@ -58,6 +58,12 @@ export class UsersController {
   }
 
   @Roles(UserRole.ADMINISTRATOR)
+  @Get(':id')
+  findById(@Param('id') id: string) {
+    return this.usersService.findById(id);
+  }
+
+  @Roles(UserRole.ADMINISTRATOR)
   @Post()
   create(
     @CurrentUser() actor: AuthenticatedUser,
