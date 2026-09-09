@@ -5,11 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  AttendanceSessionStatus,
   AuditAction,
+  BreakRecordStatus,
   CorrectionStatus,
   CorrectionTargetType,
   DecideCorrectionInput,
   RequestCorrectionInput,
+  TaskTimeEntryStatus,
 } from '@atms/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/services/audit.service';
@@ -93,21 +96,44 @@ export class CorrectionsService {
     proposedStart: Date | undefined,
     proposedEnd: Date | undefined,
   ) {
+    // A correction that sets an end/endAt must also transition the record's
+    // own status field, or it's left in a stale "still active" state despite
+    // genuinely having a real end timestamp - found live: this let a
+    // corrected attendance session with a real clockOutAt keep matching the
+    // missing-clock-out reminder scan's `status IN (ACTIVE, ON_BREAK)` query,
+    // firing a real, incorrect reminder for a session that wasn't actually
+    // missing a clock-out. The same staleness would equally affect the
+    // long-running-timer scan's `status = RUNNING` query for task time
+    // entries, so all three target types are fixed the same way.
     switch (targetType) {
       case CorrectionTargetType.ATTENDANCE_SESSION:
         return this.prisma.attendanceSession.update({
           where: { id: targetId },
-          data: { clockInAt: proposedStart, clockOutAt: proposedEnd },
+          data: {
+            clockInAt: proposedStart,
+            clockOutAt: proposedEnd,
+            ...(proposedEnd
+              ? { status: AttendanceSessionStatus.COMPLETED }
+              : {}),
+          },
         });
       case CorrectionTargetType.BREAK_RECORD:
         return this.prisma.breakRecord.update({
           where: { id: targetId },
-          data: { startAt: proposedStart, endAt: proposedEnd },
+          data: {
+            startAt: proposedStart,
+            endAt: proposedEnd,
+            ...(proposedEnd ? { status: BreakRecordStatus.COMPLETED } : {}),
+          },
         });
       case CorrectionTargetType.TASK_TIME_ENTRY:
         return this.prisma.taskTimeEntry.update({
           where: { id: targetId },
-          data: { startAt: proposedStart, endAt: proposedEnd },
+          data: {
+            startAt: proposedStart,
+            endAt: proposedEnd,
+            ...(proposedEnd ? { status: TaskTimeEntryStatus.CLOSED } : {}),
+          },
         });
     }
   }
