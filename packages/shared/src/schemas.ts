@@ -41,6 +41,16 @@ const optionalDueDate = z.preprocess(
   z.string().datetime().optional(),
 );
 
+// react-hook-form's { valueAsNumber: true } turns a blank <input type="number">
+// into NaN, not undefined - z.number().optional() only lets undefined through,
+// so leaving an optional number field empty (the common case) failed validation
+// with "Expected number, received nan" and blocked the whole form. Found live:
+// creating a task with Estimated minutes left blank through the real form.
+const optionalPositiveInt = z.preprocess(
+  (val) => (typeof val === 'number' && Number.isNaN(val) ? undefined : val),
+  z.number().int().positive().optional(),
+);
+
 // Shared minimum password policy — enforced identically client- and server-side (AC-001-001-03).
 export const passwordSchema = z
   .string()
@@ -86,7 +96,7 @@ export const createTaskSchema = z.object({
   description: z.string().max(4000).optional(),
   priority: z.nativeEnum(TaskPriority).default(TaskPriority.MEDIUM),
   dueDate: optionalDueDate,
-  estimatedMinutes: z.number().int().positive().optional(),
+  estimatedMinutes: optionalPositiveInt,
   assigneeId: optionalUuid,
 });
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
