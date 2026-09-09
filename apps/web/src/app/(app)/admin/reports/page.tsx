@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { UserStatus } from '@atms/shared';
 import { api, exportUrl } from '@/lib/api-client';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,21 @@ interface AttendanceRow {
   breakMinutes: number;
   netWorkingMinutes: number;
   incomplete: boolean;
+}
+
+interface BreakRow {
+  date: string;
+  employee: string;
+  start: string;
+  end: string;
+  durationMinutes: number;
+  status: string;
+}
+
+interface UserOption {
+  id: string;
+  firstName: string;
+  surname: string;
 }
 
 function defaultFrom() {
@@ -49,14 +65,43 @@ export default function ReportsPage() {
   const [summaryView, setSummaryView] = useState(false);
   const [drilldownEmployee, setDrilldownEmployee] = useState<string | null>(null);
   const [hideZeroUnallocated, setHideZeroUnallocated] = useState(false);
+  const [userId, setUserId] = useState('');
 
+  const { data: users } = useQuery({
+    queryKey: ['users', 'admin', 'active-for-reports'],
+    queryFn: () => api.get<UserOption[]>('/users', { status: UserStatus.ACTIVE }),
+  });
+
+  // AC-004-006-01: the breaks (and every other) report already supported a
+  // userId filter server-side, but this page never exposed a way to pick one.
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['reports', report, from, to],
+    queryKey: ['reports', report, from, to, userId],
     queryFn: () =>
-      api.get<{ rows: Record<string, unknown>[] }>(`/reports/${report}`, { from, to, format: 'json' }),
+      api.get<{ rows: Record<string, unknown>[] }>(`/reports/${report}`, {
+        from,
+        to,
+        format: 'json',
+        ...(userId ? { userId } : {}),
+      }),
   });
 
   const columns = data?.rows?.[0] ? Object.keys(data.rows[0]) : [];
+
+  // AC-004-006-02: the breaks report only ever listed individual break
+  // periods, never the daily totals this AC also asks for.
+  const breakDailyTotals = useMemo(() => {
+    if (report !== 'breaks' || !data?.rows) return [];
+    const rows = data.rows as unknown as BreakRow[];
+    const byDate = new Map<string, { date: string; count: number; totalMinutes: number; hasActive: boolean }>();
+    for (const r of rows) {
+      const existing = byDate.get(r.date) ?? { date: r.date, count: 0, totalMinutes: 0, hasActive: false };
+      existing.count += 1;
+      existing.totalMinutes += r.durationMinutes;
+      existing.hasActive = existing.hasActive || r.status === 'ACTIVE';
+      byDate.set(r.date, existing);
+    }
+    return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }, [report, data]);
 
   const employeeSummary = useMemo(() => {
     if (report !== 'attendance' || !data?.rows) return [];
@@ -109,11 +154,25 @@ export default function ReportsPage() {
           <Field label="To">
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </Field>
+          <Field label="Employee">
+            <select
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+            >
+              <option value="">All employees</option>
+              {(users ?? []).map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.firstName} {u.surname}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Button onClick={() => refetch()}>Run</Button>
-          <a href={exportUrl(`/reports/${report}`, { from, to, format: 'csv' })}>
+          <a href={exportUrl(`/reports/${report}`, { from, to, format: 'csv', ...(userId ? { userId } : {}) })}>
             <Button variant="secondary">Export CSV</Button>
           </a>
-          <a href={exportUrl(`/reports/${report}`, { from, to, format: 'xlsx' })}>
+          <a href={exportUrl(`/reports/${report}`, { from, to, format: 'xlsx', ...(userId ? { userId } : {}) })}>
             <Button variant="secondary">Export XLSX</Button>
           </a>
           {report === 'attendance' && (
@@ -174,6 +233,41 @@ export default function ReportsPage() {
                 {employeeSummary.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-4 text-center text-slate-500">
+                      No data for this period.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {report === 'breaks' && (
+        <Card>
+          <CardTitle>Daily totals, {from} – {to}</CardTitle>
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Break daily totals">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
+                  <th className="py-2 pr-4">Date</th>
+                  <th className="py-2 pr-4">Breaks</th>
+                  <th className="py-2 pr-4">Total minutes</th>
+                  <th className="py-2 pr-4">Has active break</th>
+                </tr>
+              </thead>
+              <tbody>
+                {breakDailyTotals.map((row) => (
+                  <tr key={row.date} className="border-b border-slate-100">
+                    <td className="py-2 pr-4">{row.date}</td>
+                    <td className="py-2 pr-4">{row.count}</td>
+                    <td className="py-2 pr-4">{row.totalMinutes}</td>
+                    <td className="py-2 pr-4">{row.hasActive ? 'Yes' : '—'}</td>
+                  </tr>
+                ))}
+                {breakDailyTotals.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-4 text-center text-slate-500">
                       No data for this period.
                     </td>
                   </tr>
