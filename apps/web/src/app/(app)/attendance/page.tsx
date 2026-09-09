@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { formatMinutes } from '@/lib/use-reconciliation';
@@ -75,7 +76,11 @@ export default function AttendanceHistoryPage() {
             <tbody>
               {(sessions ?? []).map((s) => (
                 <tr key={s.id} className="border-b border-slate-100">
-                  <td className="py-2 pr-4">{new Date(s.clockInAt).toLocaleDateString()}</td>
+                  <td className="py-2 pr-4">
+                    <Link href={`/attendance/${s.id}`} className="text-slate-900 hover:underline">
+                      {new Date(s.clockInAt).toLocaleDateString()}
+                    </Link>
+                  </td>
                   <td className="py-2 pr-4">{new Date(s.clockInAt).toLocaleTimeString()}</td>
                   <td className="py-2 pr-4">{s.clockOutAt ? new Date(s.clockOutAt).toLocaleTimeString() : '—'}</td>
                   <td className="py-2 pr-4">{formatMinutes(breakMinutes(s))}</td>
