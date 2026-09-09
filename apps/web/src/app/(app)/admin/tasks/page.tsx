@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -20,13 +21,23 @@ interface UserOption {
   status: UserStatus;
 }
 
-export default function AdminTasksPage() {
+// AC-008-004-03 / AC-008-002-04: the admin dashboard's KPI tiles link here with
+// ?status=... or ?overdue=1 so a count on the dashboard actually drills down to
+// the matching filtered list, instead of just being a number nobody can click.
+function AdminTasksPageInner() {
+  const searchParams = useSearchParams();
   const [showCreate, setShowCreate] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') ?? '');
+  const overdueOnly = searchParams.get('overdue') === '1';
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: tasks, isLoading } = useAllTasks(statusFilter ? { status: statusFilter } : {});
+  const { data: allTasks, isLoading } = useAllTasks(statusFilter ? { status: statusFilter } : {});
+  const tasks = overdueOnly
+    ? (allTasks ?? []).filter(
+        (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'COMPLETED' && t.status !== 'CANCELLED',
+      )
+    : allTasks;
   const { data: users } = useQuery({
     queryKey: ['users', 'admin', 'active-for-assign'],
     queryFn: () => api.get<UserOption[]>('/users', { status: UserStatus.ACTIVE }),
@@ -100,7 +111,7 @@ export default function AdminTasksPage() {
       )}
 
       <Card>
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <label htmlFor="task-status-filter" className="text-sm text-slate-600">
             Filter by status:
           </label>
@@ -117,6 +128,9 @@ export default function AdminTasksPage() {
               </option>
             ))}
           </select>
+          {overdueOnly && (
+            <Badge color="red">Overdue only (from dashboard)</Badge>
+          )}
         </div>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
         <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tasks table">
@@ -153,5 +167,13 @@ export default function AdminTasksPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function AdminTasksPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+      <AdminTasksPageInner />
+    </Suspense>
   );
 }

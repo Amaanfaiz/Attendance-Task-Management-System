@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -30,9 +31,12 @@ const statusColor: Record<UserStatus, 'slate' | 'green' | 'amber' | 'red'> = {
   [UserStatus.REJECTED]: 'red',
 };
 
-export default function UserManagementPage() {
+// AC-008-002-04: linked from the admin dashboard's "Active Users" KPI with
+// ?status=... so the count is an actual drill-down, not just a static number.
+function UserManagementPageInner() {
   const queryClient = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState('');
+  const searchParams = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') ?? '');
   const [showCreate, setShowCreate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { data: departments } = useDepartments();
@@ -230,5 +234,13 @@ export default function UserManagementPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function UserManagementPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+      <UserManagementPageInner />
+    </Suspense>
   );
 }
