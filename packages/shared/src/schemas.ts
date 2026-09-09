@@ -31,6 +31,16 @@ const optionalNullableTrimmedString = (max: number) =>
     z.string().max(max).nullable().optional(),
   );
 
+// An <input type="date"> submits a plain "YYYY-MM-DD" string, but dueDate expects
+// a full ISO datetime - convert to midnight UTC on that date, and treat "" as unset.
+const optionalDueDate = z.preprocess(
+  (val) => {
+    if (typeof val !== 'string' || val.trim() === '') return undefined;
+    return /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T00:00:00.000Z` : val;
+  },
+  z.string().datetime().optional(),
+);
+
 // Shared minimum password policy — enforced identically client- and server-side (AC-001-001-03).
 export const passwordSchema = z
   .string()
@@ -75,7 +85,7 @@ export const createTaskSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(4000).optional(),
   priority: z.nativeEnum(TaskPriority).default(TaskPriority.MEDIUM),
-  dueDate: z.string().datetime().optional(),
+  dueDate: optionalDueDate,
   estimatedMinutes: z.number().int().positive().optional(),
   assigneeId: optionalUuid,
 });

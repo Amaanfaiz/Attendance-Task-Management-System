@@ -103,6 +103,9 @@ function AdminTasksPageInner() {
                 <Input type="number" {...register('estimatedMinutes', { valueAsNumber: true })} />
               </Field>
             </div>
+            <Field label="Due date" error={errors.dueDate?.message}>
+              <Input type="date" {...register('dueDate')} />
+            </Field>
             <Button type="submit" loading={isSubmitting}>
               Create Task
             </Button>
