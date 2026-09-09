@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -26,8 +25,6 @@ const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour, AC-001-005-03
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -148,9 +145,14 @@ export class AuthService {
   // Always sends when an email provider is configured (EmailService.isConfigured) -
   // unlike NotificationsService's email channel, this isn't gated by a settings
   // toggle, since it's the only way a user actually receives their reset link.
-  // Still logs the link either way: the one reliable fallback when email isn't
-  // configured yet, and handy for local dev without a Resend key.
-  async createPasswordResetToken(userId: string, email: string): Promise<void> {
+  // SRS Section 10 explicitly requires reset tokens never be logged - the token is
+  // never written to the logger, only sent by email or (outside production only,
+  // see forgotPassword) returned directly to the requester so local dev stays
+  // testable without a Resend key.
+  async createPasswordResetToken(
+    userId: string,
+    email: string,
+  ): Promise<string> {
     const token = randomBytes(32).toString('hex');
     const tokenHash = createHash('sha256').update(token).digest('hex');
     await this.prisma.passwordResetToken.create({
@@ -160,7 +162,6 @@ export class AuthService {
         expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
       },
     });
-    this.logger.log(`Password set/reset link for ${email}: token=${token}`);
 
     const resetUrl = `${this.config.get<string>('webOrigin')}/reset-password?token=${token}`;
     await this.email.send(
@@ -168,18 +169,25 @@ export class AuthService {
       'Reset your ATMS password',
       `Use this link to set your password: ${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can ignore this email.`,
     );
+    return token;
   }
 
-  // AC-001-005-02: response never reveals whether the account exists.
+  // AC-001-005-02: response never reveals whether the account exists - in
+  // production the shape and content of this response never depends on `user`.
+  // Outside production, devResetToken lets the flow be tested without a configured
+  // email provider; it deliberately breaks the non-disclosure guarantee, which is
+  // acceptable only because it can never run in production.
   async forgotPassword(input: ForgotPasswordInput) {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email },
     });
+    let devResetToken: string | undefined;
     if (user) {
-      await this.createPasswordResetToken(user.id, user.email);
+      devResetToken = await this.createPasswordResetToken(user.id, user.email);
     }
     return {
       message: 'If that email is registered, a reset link has been sent.',
+      ...(process.env.NODE_ENV !== 'production' ? { devResetToken } : {}),
     };
   }
 
