@@ -40,12 +40,15 @@ function defaultTo() {
 // attendance rows rather than a new endpoint: summing them client-side is
 // exactly "aggregate totals reconcile to daily records" by construction,
 // since the summary IS a sum of the visible daily rows.
+// AC-010-004-02: the unallocated-time report had no way to include/exclude
+// zero-unallocated days either - also found via AC testing, fixed the same way.
 export default function ReportsPage() {
   const [report, setReport] = useState<(typeof REPORTS)[number]['value']>('attendance');
   const [from, setFrom] = useState(defaultFrom());
   const [to, setTo] = useState(defaultTo());
   const [summaryView, setSummaryView] = useState(false);
   const [drilldownEmployee, setDrilldownEmployee] = useState<string | null>(null);
+  const [hideZeroUnallocated, setHideZeroUnallocated] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['reports', report, from, to],
@@ -70,10 +73,13 @@ export default function ReportsPage() {
     return Array.from(byEmployee.values()).sort((a, b) => a.employee.localeCompare(b.employee));
   }, [report, data]);
 
-  const displayedRows: Record<string, unknown>[] = drilldownEmployee
+  const displayedRows: Record<string, unknown>[] = (drilldownEmployee
     ? (data?.rows ?? []).filter((r) => r.employee === drilldownEmployee)
-    : (data?.rows ?? []);
-  const displayedColumns = drilldownEmployee ? columns : columns;
+    : (data?.rows ?? [])
+  ).filter((r) =>
+    report === 'unallocated' && hideZeroUnallocated ? (r.unallocatedMinutes as number) !== 0 : true,
+  );
+  const displayedColumns = columns;
 
   return (
     <div className="space-y-6">
@@ -119,6 +125,14 @@ export default function ReportsPage() {
               }}
             >
               {summaryView ? 'Show daily detail' : 'Summarise by employee'}
+            </Button>
+          )}
+          {report === 'unallocated' && (
+            <Button
+              variant="secondary"
+              onClick={() => setHideZeroUnallocated((v) => !v)}
+            >
+              {hideZeroUnallocated ? 'Show zero-unallocated days' : 'Hide zero-unallocated days'}
             </Button>
           )}
         </div>
