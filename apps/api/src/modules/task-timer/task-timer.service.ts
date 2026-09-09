@@ -6,15 +6,20 @@ import {
 } from '@nestjs/common';
 import {
   AttendanceSessionStatus,
+  AuditAction,
   TaskStatus,
   TaskTimeEntryStatus,
   getUtcDayRange,
 } from '@atms/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../../common/services/audit.service';
 
 @Injectable()
 export class TaskTimerService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   private async requireActiveWorkingSession(userId: string) {
     const session = await this.prisma.attendanceSession.findFirst({
@@ -84,6 +89,21 @@ export class TaskTimerService {
             ]
           : []),
       ]);
+      // AC-005-006-04: this auto-transition is as much a status change as an
+      // explicit admin PATCH, and TasksService.update() already audits that
+      // path — this one silently didn't (TaskTimerService had no AuditService
+      // at all), found via live AC testing.
+      if (task.status === TaskStatus.TO_DO) {
+        await this.audit.record({
+          actorId: userId,
+          action: AuditAction.TASK_STATUS_CHANGED,
+          targetType: 'Task',
+          targetId: taskId,
+          before: { status: TaskStatus.TO_DO },
+          after: { status: TaskStatus.IN_PROGRESS },
+          metadata: { trigger: 'timer_start' },
+        });
+      }
       return entry;
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'P2002') {
@@ -172,6 +192,17 @@ export class TaskTimerService {
           ]
         : []),
     ]);
+    if (newTask.status === TaskStatus.TO_DO) {
+      await this.audit.record({
+        actorId: userId,
+        action: AuditAction.TASK_STATUS_CHANGED,
+        targetType: 'Task',
+        targetId: newTaskId,
+        before: { status: TaskStatus.TO_DO },
+        after: { status: TaskStatus.IN_PROGRESS },
+        metadata: { trigger: 'task_switch' },
+      });
+    }
     return newEntry;
   }
 
