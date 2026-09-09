@@ -70,4 +70,14 @@ export enum AuditAction {
   CORRECTION_APPROVED = 'CORRECTION_APPROVED',
   CORRECTION_REJECTED = 'CORRECTION_REJECTED',
   ADMIN_DIRECT_CORRECTION = 'ADMIN_DIRECT_CORRECTION',
+  REMINDER_SENT = 'REMINDER_SENT',
+}
+
+// EP-011: one row per notification a user receives, either from a real task
+// reassignment or from the reminder-scanning cron.
+export enum NotificationType {
+  TASK_ASSIGNED = 'TASK_ASSIGNED',
+  MISSING_CLOCK_OUT = 'MISSING_CLOCK_OUT',
+  LONG_RUNNING_TIMER = 'LONG_RUNNING_TIMER',
+  UNALLOCATED_TIME = 'UNALLOCATED_TIME',
 }

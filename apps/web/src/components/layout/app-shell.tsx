@@ -9,6 +9,7 @@ import { UserRole } from '@atms/shared';
 import { useCurrentUser } from '@/lib/use-current-user';
 import { api } from '@/lib/api-client';
 import { GlobalTimerBar } from './global-timer-bar';
+import { NotificationBell } from './notification-bell';
 
 const employeeLinks = [
   { href: '/my-day', label: 'My Day' },
@@ -26,6 +27,7 @@ const adminLinks = [
   { href: '/admin/reports', label: 'Reports' },
   { href: '/admin/corrections', label: 'Correction Review' },
   { href: '/admin/audit', label: 'Audit Log' },
+  { href: '/admin/settings', label: 'Settings' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -132,6 +134,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="min-w-0 flex-1 overflow-x-auto">
             <GlobalTimerBar />
           </div>
+          <NotificationBell />
           <button onClick={logout} className="shrink-0 text-xs text-slate-500 underline md:hidden">
             Log out
           </button>

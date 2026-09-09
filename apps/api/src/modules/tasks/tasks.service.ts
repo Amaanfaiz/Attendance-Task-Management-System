@@ -14,12 +14,14 @@ import {
 } from '@atms/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/services/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // AC-005-002-01: an org setting controls whether employees may create tasks at all;
@@ -62,6 +64,14 @@ export class TasksService {
       targetId: task.id,
       after: { title: task.title, assigneeId: task.assigneeId },
     });
+    if (task.assigneeId) {
+      await this.notifications.notifyTaskAssigned(
+        actorId,
+        task.assigneeId,
+        task.id,
+        task.title,
+      );
+    }
     return task;
   }
 
@@ -200,6 +210,12 @@ export class TasksService {
         before: { assigneeId: before.assigneeId },
         after: { assigneeId: input.assigneeId },
       });
+      await this.notifications.notifyTaskAssigned(
+        actorId,
+        input.assigneeId,
+        taskId,
+        task.title,
+      );
     }
     await this.audit.record({
       actorId,

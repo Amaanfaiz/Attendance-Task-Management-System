@@ -5,6 +5,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 import {
@@ -18,6 +19,7 @@ import {
 } from '@atms/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/services/audit.service';
+import { EmailService } from '../../common/services/email.service';
 import { TokensService } from './tokens.service';
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour, AC-001-005-03
@@ -29,6 +31,8 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly email: EmailService,
+    private readonly config: ConfigService,
     private readonly tokens: TokensService,
   ) {}
 
@@ -141,9 +145,11 @@ export class AuthService {
     }
   }
 
-  // No transactional email provider is configured for this MVP; the reset link is
-  // written to the server log so the flow is fully testable end-to-end. Wire a real
-  // provider (SES/SendGrid/Resend) here before production use of self-service reset.
+  // Always sends when an email provider is configured (EmailService.isConfigured) -
+  // unlike NotificationsService's email channel, this isn't gated by a settings
+  // toggle, since it's the only way a user actually receives their reset link.
+  // Still logs the link either way: the one reliable fallback when email isn't
+  // configured yet, and handy for local dev without a Resend key.
   async createPasswordResetToken(userId: string, email: string): Promise<void> {
     const token = randomBytes(32).toString('hex');
     const tokenHash = createHash('sha256').update(token).digest('hex');
@@ -155,6 +161,13 @@ export class AuthService {
       },
     });
     this.logger.log(`Password set/reset link for ${email}: token=${token}`);
+
+    const resetUrl = `${this.config.get<string>('webOrigin')}/reset-password?token=${token}`;
+    await this.email.send(
+      email,
+      'Reset your ATMS password',
+      `Use this link to set your password: ${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can ignore this email.`,
+    );
   }
 
   // AC-001-005-02: response never reveals whether the account exists.

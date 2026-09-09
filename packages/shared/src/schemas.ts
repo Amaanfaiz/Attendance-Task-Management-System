@@ -128,6 +128,10 @@ export const updateAppSettingsSchema = z
     sessionInactivityTimeoutMinutes: z.number().int().positive(),
     missingClockOutThresholdMinutes: z.number().int().positive(),
     longRunningTimerThresholdMinutes: z.number().int().positive(),
+    longRunningTimerCooldownMinutes: z.number().int().positive(),
+    unallocatedTimeThresholdMinutes: z.number().int().positive(),
+    unallocatedReminderCutoffHourUtc: z.number().int().min(0).max(23),
+    notificationsEmailEnabled: z.boolean(),
   })
   .partial();
 export type UpdateAppSettingsInput = z.infer<typeof updateAppSettingsSchema>;

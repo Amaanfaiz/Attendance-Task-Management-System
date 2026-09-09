@@ -12,4 +12,12 @@ export default () => ({
     refreshTtl: process.env.JWT_REFRESH_TTL ?? '7d',
     refreshTtlMs: 7 * 24 * 60 * 60 * 1000,
   },
+  email: {
+    // Unset in dev/test on purpose - NotificationsService treats a missing key as
+    // "email channel not configured" and skips sending rather than throwing, so the
+    // rest of the app never depends on this being present (AC-011-001-01: email is
+    // one of two channels, gated by settings, not a hard requirement).
+    resendApiKey: process.env.RESEND_API_KEY,
+    from: process.env.EMAIL_FROM ?? 'ATMS <onboarding@resend.dev>',
+  },
 });

@@ -104,6 +104,7 @@ model User {
   auditLogs            AuditLog[]
   passwordResetTokens  PasswordResetToken[]
   refreshTokens        RefreshToken[]
+  notifications        Notification[]
 
   @@map("users")
 }
@@ -188,6 +189,7 @@ model Task {
   createdBy       User            @relation("TaskCreator", fields: [createdById], references: [id])
   assignee        User?           @relation("TaskAssignee", fields: [assigneeId], references: [id])
   taskTimeEntries TaskTimeEntry[]
+  notifications   Notification[]
 
   @@index([assigneeId, status])
   @@map("tasks")
@@ -258,12 +260,45 @@ model AuditLog {
 // Singleton row (id always "default") holding organisation-wide toggles referenced
 // by AC-001-001-04 and AC-005-002-01.
 model AppSettings {
-  id                              String  @id @default("default")
-  requireRegistrationApproval     Boolean @default(true)
-  employeesCanCreateTasks         Boolean @default(true)
-  sessionInactivityTimeoutMinutes Int     @default(30)
-  missingClockOutThresholdMinutes Int     @default(600)
-  longRunningTimerThresholdMinutes Int    @default(240)
+  id                                String  @id @default("default")
+  requireRegistrationApproval       Boolean @default(true)
+  employeesCanCreateTasks           Boolean @default(true)
+  sessionInactivityTimeoutMinutes   Int     @default(30)
+  missingClockOutThresholdMinutes   Int     @default(600)
+  longRunningTimerThresholdMinutes  Int     @default(240)
+  longRunningTimerCooldownMinutes   Int     @default(60)
+  unallocatedTimeThresholdMinutes   Int     @default(30)
+  unallocatedReminderCutoffHourUtc  Int     @default(6)
+  notificationsEmailEnabled         Boolean @default(false)
 
   @@map("app_settings")
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  MISSING_CLOCK_OUT
+  LONG_RUNNING_TIMER
+  UNALLOCATED_TIME
+}
+
+// EP-011: durable in-app notifications, created by a real task reassignment or by the
+// reminder-scanning cron (notifications.service.ts). dedupeKey guards against spamming
+// the same event twice - see notifications.service.ts for the exact key per type.
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  taskId    String?
+  dedupeKey String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt])
+  @@index([userId, dedupeKey])
+  @@map("notifications")
 }
