@@ -53,6 +53,43 @@ describe('calculateTaskMinutes (BR-009)', () => {
   });
 });
 
+describe('daylight-saving boundary safety (NFR-005, RISK-011)', () => {
+  // US Eastern DST ends 2026-11-01 02:00 local (falls back to 01:00) - that
+  // calendar day has 25 real hours. A session spanning it, read naively off
+  // local wall-clock times ("9:00 PM to 9:00 AM" -> looks like 12h), is
+  // actually 13h of real elapsed time. Every stored timestamp in this system
+  // is UTC (Postgres timestamptz + toISOString()), so this only stays correct
+  // because the math never touches local wall-clock time at all - these are
+  // the real UTC instants that "9:00 PM EDT" and "9:00 AM EST" correspond to.
+  it('computes true elapsed minutes across a real US fall-back transition, not naive wall-clock subtraction', () => {
+    const clockInUtc = new Date('2026-11-01T01:00:00Z'); // 2026-10-31 21:00 EDT (UTC-4)
+    const clockOutUtc = new Date('2026-11-01T14:00:00Z'); // 2026-11-01 09:00 EST (UTC-5)
+    const naiveWallClockMinutes = 12 * 60; // what "9 PM to 9 AM" looks like if you ignore the fall-back
+    const trueMinutes = calculateNetWorkingMinutes(
+      { start: clockInUtc, end: clockOutUtc },
+      [],
+    );
+    expect(trueMinutes).toBeCloseTo(13 * 60, 5); // 780 real minutes elapsed
+    expect(trueMinutes).not.toBeCloseTo(naiveWallClockMinutes, 5);
+  });
+
+  // US Eastern DST begins 2026-03-08 02:00 local (springs forward to 03:00) -
+  // that calendar day has only 23 real hours. Same principle, opposite
+  // direction: "9:00 PM to 9:00 AM" naive wall-clock reads 12h, but only 11h
+  // of real time actually passed.
+  it('computes true elapsed minutes across a real US spring-forward transition', () => {
+    const clockInUtc = new Date('2026-03-08T02:00:00Z'); // 2026-03-07 21:00 EST (UTC-5)
+    const clockOutUtc = new Date('2026-03-08T13:00:00Z'); // 2026-03-08 09:00 EDT (UTC-4)
+    const naiveWallClockMinutes = 12 * 60;
+    const trueMinutes = calculateNetWorkingMinutes(
+      { start: clockInUtc, end: clockOutUtc },
+      [],
+    );
+    expect(trueMinutes).toBeCloseTo(11 * 60, 5); // 660 real minutes elapsed
+    expect(trueMinutes).not.toBeCloseTo(naiveWallClockMinutes, 5);
+  });
+});
+
 describe('reconcile (BR-010)', () => {
   it('matches the worked example from the spec: 7h30m worked, 6h45m tasked -> 45m unallocated', () => {
     const attendance = { start: new Date('2026-01-01T09:00:00Z'), end: new Date('2026-01-01T17:00:00Z') };
