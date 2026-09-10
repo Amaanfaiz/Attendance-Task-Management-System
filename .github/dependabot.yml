@@ -5,9 +5,18 @@ updates:
     schedule:
       interval: "weekly"
     groups:
+      # Patch/minor bumps are low-risk and noisy one-at-a-time - batch them.
+      # Major bumps get their own PR each, deliberately NOT grouped here:
+      # the first grouped PR this config produced bundled 36 packages into
+      # one diff, including NestJS 10->12, Prisma 5->7 and Next.js 14->16
+      # (skipping 15 entirely) - completely unreviewable and not something
+      # that should ever be merged as one change.
       npm-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "patch"
+          - "minor"
     open-pull-requests-limit: 10
 
   - package-ecosystem: "github-actions"
