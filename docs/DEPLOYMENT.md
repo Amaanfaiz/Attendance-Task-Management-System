@@ -68,7 +68,16 @@ your own Azure identity.
 - The API's `/api/v1/ready` endpoint (used by the Bicep readiness probe) checks real DB connectivity, not just process liveness.
 - Migrations apply cleanly to a fresh database (tested against an isolated `atms_test` DB in CI).
 
+## Current state
+
+The Bicep template has been deployed against a real Azure subscription and is live —
+see the README's "Live demo" section for the URL. Postgres currently runs on
+`Standard_B2s` (Burstable tier, bumped once from the original `B1ms` after a real load
+test found it undersized — see the tracker's RISK-007) and the Container Registry is on
+the Basic tier. Both are cost-minimised for this delivery, not sized for real production
+load at a larger organisation — review SKU choices before onboarding real users at scale.
+
 ## What's still open
 
-- The Bicep template hasn't been deployed against a real subscription (I have no Azure access) — it's written to the documented API shape but should be reviewed before a real deploy, particularly the SKU choices (`Standard_B1ms` / Basic ACR are cost-minimised for a demo, not sized for real production load).
 - Custom domain + managed TLS certificate isn't set up — Container Apps' default `*.azurecontainerapps.io` domain ships with HTTPS already, which satisfies NFR-003 for the demo, but a real go-live would want your own domain.
+- No separate staging environment — the one deployed environment is the same one used for all live verification testing throughout development.
