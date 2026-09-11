@@ -1,7 +1,9 @@
 # syntax=docker/dockerfile:1
 FROM node:20-alpine AS base
 WORKDIR /repo
-RUN apk add --no-cache openssl
+# python3/make/g++: argon2 has no prebuilt binary for this platform as of 0.45.x and
+# falls back to compiling its native binding via node-gyp during npm install.
+RUN apk add --no-cache openssl python3 make g++
 
 FROM base AS deps
 COPY package.json package-lock.json ./
