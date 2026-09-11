@@ -14,7 +14,7 @@ whichever task they're working on (task clock). The app reconciles the two to sh
 Modular monolith, per the SRS's recommended stack:
 
 ```
-apps/web    Next.js 14 (App Router) + TypeScript + Tailwind — client-rendered dashboard
+apps/web    Next.js 16 (App Router) + TypeScript + Tailwind — client-rendered dashboard
 apps/api    NestJS 10 + TypeScript — REST API, modular by domain
 packages/shared   Zod schemas, enums, and the time-reconciliation math shared by both
 ```
@@ -117,15 +117,5 @@ Employee and Administrator perspectives) is:
   address (`onboarding@resend.dev`); Resend rejects delivery to any other recipient until
   a custom domain is verified. The reset-token mechanism itself works correctly — this is
   specifically an email-delivery gap (tracker: DEF-022, RISK-009).
-- **Next.js is pinned to 14.2.35**, which carries two critical CVEs (unauthenticated RCE
-  in Image Optimization; a Windows-hosted-server RCE that doesn't apply to this app's
-  Linux container deployment). The app doesn't use `next/image` anywhere, so real exposure
-  is low, but the only actual fix is a 14→15 major-version migration, deliberately
-  deferred rather than rushed into a live, already-verified app (tracker: RISK-008).
-  GitHub Dependabot alerts are enabled for ongoing visibility.
-- **Automated browser end-to-end tests (Playwright) are not yet implemented.** CI runs
-  API-level e2e tests against a real Postgres instance and this project's critical
-  workflows have been extensively manually verified live against the deployed app, but
-  the SRS's specific requirement for automated Playwright browser coverage is still open.
 - Firefox (Gecko) has not been separately verified; the app has been confirmed working in
   Chrome, Edge and Safari.
