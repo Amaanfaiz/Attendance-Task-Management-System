@@ -113,11 +113,17 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+    # NODE_ENV is deliberately NOT set at job level: npm ci treats
+    # NODE_ENV=production as a signal to skip devDependencies entirely (found
+    # live - a first attempt at this job installed 349 packages instead of the
+    # normal ~1155 and broke the shared package's TypeScript build as a
+    # result, since typescript itself is a devDependency). Set it only on the
+    # two steps that actually run the built servers, where it matters for
+    # real runtime behaviour.
     env:
       DATABASE_URL: postgresql://atms:atms_ci_password@localhost:5432/atms_test?schema=public
       JWT_ACCESS_SECRET: ci_access_secret
       JWT_REFRESH_SECRET: ci_refresh_secret
-      NODE_ENV: production
       WEB_ORIGIN: http://localhost:3000
       API_INTERNAL_URL: http://localhost:3001
       PORT: 3001
@@ -149,16 +155,12 @@ jobs:
         run: npm run build -w apps/api
 
       - name: Build web
-        # NODE_ENV=production above would make `next build` skip installing
-        # devDependencies-only tooling it still needs at build time in some
-        # setups, so build explicitly with development semantics for the
-        # build step itself, then run with NODE_ENV=production below.
         run: npm run build -w apps/web
-        env:
-          NODE_ENV: development
 
       - name: Start API
         run: nohup npm run start -w apps/api > api.log 2>&1 &
+        env:
+          NODE_ENV: production
 
       - name: Wait for API readiness
         run: |
