@@ -77,6 +77,33 @@ test found it undersized — see the tracker's RISK-007) and the Container Regis
 the Basic tier. Both are cost-minimised for this delivery, not sized for real production
 load at a larger organisation — review SKU choices before onboarding real users at scale.
 
+## Database roles
+
+The running API does **not** connect as `atmsadmin` (the Postgres server admin).
+It connects as a separate, scoped role, `atms_app`, created with:
+
+```sql
+CREATE ROLE atms_app WITH LOGIN PASSWORD '<password>';
+GRANT CONNECT ON DATABASE atms TO atms_app;
+GRANT USAGE ON SCHEMA public TO atms_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO atms_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO atms_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO atms_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO atms_app;
+```
+
+`atms_app` has no `CREATE`/DDL rights, can't manage roles or databases, and can't
+touch anything outside this one schema — if the API were ever compromised, the
+blast radius is limited to its own application data, not the database server.
+The Container App's `database-url` secret points at this role.
+
+`atmsadmin` is still needed for `prisma migrate deploy` (step 4 above, and any
+future migration) since DDL requires more than `atms_app` has — after applying
+migrations, `atms_app`'s default privileges (the `ALTER DEFAULT PRIVILEGES`
+statements above) automatically extend to any new tables/sequences a migration
+creates, so this grant script doesn't need re-running after every migration,
+only if the role itself is ever recreated.
+
 ## What's still open
 
 - Custom domain + managed TLS certificate isn't set up — Container Apps' default `*.azurecontainerapps.io` domain ships with HTTPS already, which satisfies NFR-003 for the demo, but a real go-live would want your own domain.
