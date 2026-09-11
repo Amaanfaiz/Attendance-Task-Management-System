@@ -10,6 +10,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@atms/shared';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditorAllowed } from '../../common/decorators/auditor-allowed.decorator';
 import {
   CurrentUser,
   AuthenticatedUser,
@@ -59,7 +60,9 @@ export class AttendanceController {
     );
   }
 
-  @Roles(UserRole.ADMINISTRATOR)
+  // RISK-015: read-only org-wide attendance status, in scope for the Auditor role.
+  @Roles(UserRole.ADMINISTRATOR, UserRole.AUDITOR)
+  @AuditorAllowed()
   @Get('admin/live')
   getLive() {
     return this.attendanceService.getLive();

@@ -2,6 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole, getUtcDayRange } from '@atms/shared';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditorAllowed } from '../../common/decorators/auditor-allowed.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @ApiTags('audit')
@@ -10,7 +11,10 @@ export class AuditController {
   constructor(private readonly prisma: PrismaService) {}
 
   // AC-009-005-02/03: administrator-only, filterable by user/date/action.
-  @Roles(UserRole.ADMINISTRATOR)
+  // RISK-015: also readable by the Auditor role - this is literally the "tamper-resistant
+  // audit view" US-009-005 names that persona for.
+  @Roles(UserRole.ADMINISTRATOR, UserRole.AUDITOR)
+  @AuditorAllowed()
   @Get()
   list(
     @Query('actorId') actorId?: string,

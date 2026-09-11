@@ -30,6 +30,17 @@ const adminLinks = [
   { href: '/admin/settings', label: 'Settings' },
 ];
 
+// RISK-015: the Auditor role can reach exactly the read-only surfaces it's
+// server-side authorised for (see AuditorScopeGuard) - not the full admin
+// nav, and not the employee self-service links, since this role has no
+// attendance/tasks of its own.
+const auditorLinks = [
+  { href: '/admin/live', label: 'Live Attendance' },
+  { href: '/admin/reports', label: 'Reports' },
+  { href: '/admin/audit', label: 'Audit Log' },
+  { href: '/profile', label: 'Profile' },
+];
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -73,7 +84,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">Loading…</div>;
   }
 
-  const links = user.role === UserRole.ADMINISTRATOR ? [...employeeLinks, ...adminLinks] : employeeLinks;
+  const links =
+    user.role === UserRole.ADMINISTRATOR
+      ? [...employeeLinks, ...adminLinks]
+      : user.role === UserRole.AUDITOR
+        ? auditorLinks
+        : employeeLinks;
+  // Auditor has no attendance/notifications of its own - these would just 403
+  // or show meaningless empty state, so they're not part of its UI at all.
+  const showPersonalWidgets = user.role !== UserRole.AUDITOR;
 
   const logout = async () => {
     await api.post('/auth/logout');
@@ -137,9 +156,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </svg>
           </button>
           <div className="min-w-0 flex-1 overflow-x-auto">
-            <GlobalTimerBar />
+            {showPersonalWidgets && <GlobalTimerBar />}
           </div>
-          <NotificationBell />
+          {showPersonalWidgets && <NotificationBell />}
           <button onClick={logout} className="shrink-0 text-xs text-slate-500 underline md:hidden">
             Log out
           </button>

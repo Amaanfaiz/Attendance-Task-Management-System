@@ -9,13 +9,17 @@ import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { UserRole, getUtcDayRange } from '@atms/shared';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditorAllowed } from '../../common/decorators/auditor-allowed.decorator';
 import { ReportsService } from './reports.service';
 import { sendCsv, sendXlsx } from './export.util';
 
 type Format = 'json' | 'csv' | 'xlsx';
 
+// RISK-015: reports are read-only and exactly what the SRS's Auditor persona
+// is meant to see ("read authorised attendance/task/audit reports").
 @ApiTags('reports')
-@Roles(UserRole.ADMINISTRATOR)
+@Roles(UserRole.ADMINISTRATOR, UserRole.AUDITOR)
+@AuditorAllowed()
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
