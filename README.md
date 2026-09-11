@@ -94,13 +94,22 @@ for the backup policy and restore procedure.
 
 ```bash
 npm run test -w packages/shared   # unit tests for the reconciliation math
-npm run test:e2e -w apps/api      # end-to-end API tests: full clock/timer/correction workflow
+npm run test:e2e -w apps/api      # API e2e tests: full clock/timer/correction workflow
+npm run test:e2e -w apps/web      # Playwright browser e2e tests
 ```
 
-The e2e suite spins up a real NestJS app against an isolated `atms_test` Postgres database
-and walks the exact critical path from the SRS: register → approve → login → clock in →
-task timer → break (auto-pause) → resume → clock-out confirmation → reconciliation →
-correction request/approval → audit trail → logout.
+The API e2e suite spins up a real NestJS app against an isolated `atms_test` Postgres
+database and walks the exact critical path from the SRS: register → approve → login →
+clock in → task timer → break (auto-pause) → resume → clock-out confirmation →
+reconciliation → correction request/approval → audit trail → logout — plus real
+concurrent-request tests proving the database rejects a simultaneous double clock-in or
+double timer-start, not just a sequential one.
+
+The Playwright suite drives the same critical path through a real Chromium browser against
+the built web app and API (both spun up fresh in CI, against their own Postgres), covering
+the SRS's specific requirement for automated browser end-to-end coverage — the employee
+flow named in §14, plus a separate admin flow (live attendance, correction approval,
+report run, audit review).
 
 ## Demo accounts and walkthrough
 
