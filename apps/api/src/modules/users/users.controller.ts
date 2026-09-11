@@ -20,6 +20,7 @@ import {
   updateOwnProfileSchema,
 } from '@atms/shared';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AuditorAllowed } from '../../common/decorators/auditor-allowed.decorator';
 import {
   CurrentUser,
   AuthenticatedUser,
@@ -32,11 +33,13 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @AuditorAllowed()
   @Get('me')
   getMe(@CurrentUser('id') userId: string) {
     return this.usersService.findMe(userId);
   }
 
+  @AuditorAllowed()
   @Patch('me')
   updateMe(
     @CurrentUser('id') userId: string,
@@ -46,7 +49,11 @@ export class UsersController {
     return this.usersService.updateOwnProfile(userId, body);
   }
 
-  @Roles(UserRole.ADMINISTRATOR)
+  // RISK-015: also readable by Auditor - needed for the Reports page's
+  // employee filter dropdown; still just a name/role/department list, no
+  // write access to any of it.
+  @Roles(UserRole.ADMINISTRATOR, UserRole.AUDITOR)
+  @AuditorAllowed()
   @Get()
   list(
     @Query('status') status?: string,

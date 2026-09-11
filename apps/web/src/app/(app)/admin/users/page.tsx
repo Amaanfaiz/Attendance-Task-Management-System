@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AdminCreateUserInput, UserRole, UserStatus, adminCreateUserSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
+import { useCurrentUser } from '@/lib/use-current-user';
 import { useDepartments } from '@/lib/use-departments';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,11 @@ function UserManagementPageInner() {
   const [showCreate, setShowCreate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { data: departments } = useDepartments();
+  const { data: currentUser } = useCurrentUser();
+  // RISK-015: Auditor can reach this page's data (GET /users is shared with the
+  // Reports employee filter) but every write here still 403s server-side - hide
+  // the edit affordances rather than show controls that look usable but aren't.
+  const canEdit = currentUser?.role === UserRole.ADMINISTRATOR;
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users', 'admin', statusFilter],
@@ -84,12 +90,14 @@ function UserManagementPageInner() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-900">User Management</h1>
-        <Button variant="secondary" onClick={() => setShowCreate((v) => !v)}>
-          {showCreate ? 'Cancel' : 'New User'}
-        </Button>
+        {canEdit && (
+          <Button variant="secondary" onClick={() => setShowCreate((v) => !v)}>
+            {showCreate ? 'Cancel' : 'New User'}
+          </Button>
+        )}
       </div>
 
-      {showCreate && (
+      {showCreate && canEdit && (
         <Card>
           <CardTitle>Create User</CardTitle>
           <form
@@ -185,31 +193,41 @@ function UserManagementPageInner() {
               {(users ?? []).map((u) => (
                 <tr key={u.id} className="border-b border-slate-100">
                   <td className="py-2 pr-4">
-                    <Link href={`/admin/users/${u.id}`} className="text-slate-900 hover:underline">
-                      {u.firstName} {u.surname}
-                    </Link>
+                    {canEdit ? (
+                      <Link href={`/admin/users/${u.id}`} className="text-slate-900 hover:underline">
+                        {u.firstName} {u.surname}
+                      </Link>
+                    ) : (
+                      <span className="text-slate-900">
+                        {u.firstName} {u.surname}
+                      </span>
+                    )}
                   </td>
                   <td className="py-2 pr-4">{u.email}</td>
                   <td className="py-2 pr-4">
-                    <select
-                      className="rounded border border-slate-200 px-1 py-0.5 text-xs"
-                      aria-label={`Change role for ${u.firstName} ${u.surname}`}
-                      value={u.role}
-                      onChange={(e) => setRole.mutate({ id: u.id, role: e.target.value as UserRole })}
-                    >
-                      {Object.values(UserRole).map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
+                    {canEdit ? (
+                      <select
+                        className="rounded border border-slate-200 px-1 py-0.5 text-xs"
+                        aria-label={`Change role for ${u.firstName} ${u.surname}`}
+                        value={u.role}
+                        onChange={(e) => setRole.mutate({ id: u.id, role: e.target.value as UserRole })}
+                      >
+                        {Object.values(UserRole).map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      u.role
+                    )}
                   </td>
                   <td className="py-2 pr-4">{u.department?.name ?? '—'}</td>
                   <td className="py-2 pr-4">
                     <Badge color={statusColor[u.status]}>{u.status}</Badge>
                   </td>
                   <td className="py-2 pr-4">
-                    {u.status === UserStatus.PENDING ? (
+                    {!canEdit ? null : u.status === UserStatus.PENDING ? (
                       <div className="flex gap-2">
                         <Button variant="secondary" onClick={() => approve.mutate(u.id)}>
                           Approve

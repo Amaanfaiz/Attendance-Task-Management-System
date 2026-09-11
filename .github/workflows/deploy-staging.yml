@@ -1,0 +1,109 @@
+name: Deploy Staging
+
+# RISK-012: Staging is deliberately separate from the "Deploy" workflow (which
+# still targets production only) - promoting a build to Staging must never be
+# confused with, or accidentally trigger, a production deploy. Manual trigger
+# only, same reasoning as production: a bad build should never reach even
+# Staging just because someone pushed to main.
+on:
+  workflow_dispatch:
+
+jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required secrets are configured
+        run: |
+          missing=""
+          [ -z "${{ secrets.AZURE_CREDENTIALS }}" ] && missing="$missing AZURE_CREDENTIALS"
+          [ -z "${{ secrets.STAGING_ACR_NAME }}" ] && missing="$missing STAGING_ACR_NAME"
+          [ -z "${{ secrets.STAGING_AZURE_RESOURCE_GROUP }}" ] && missing="$missing STAGING_AZURE_RESOURCE_GROUP"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing required secrets:$missing"
+            exit 1
+          fi
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: check-secrets
+    outputs:
+      image-tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: tag
+        run: echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to staging ACR
+        run: az acr login --name ${{ secrets.STAGING_ACR_NAME }}
+
+      - name: Build and push API image
+        run: |
+          docker build -f apps/api/Dockerfile \
+            -t ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-api:${{ steps.tag.outputs.tag }} \
+            -t ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-api:latest .
+          docker push ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-api:${{ steps.tag.outputs.tag }}
+          docker push ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-api:latest
+
+      - name: Look up the staging API Container App's public FQDN
+        id: api-fqdn
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            fqdn=$(az containerapp show \
+              --name atms-staging-api \
+              --resource-group ${{ secrets.STAGING_AZURE_RESOURCE_GROUP }} \
+              --query properties.configuration.ingress.fqdn -o tsv)
+            echo "url=https://$fqdn" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push web image
+        run: |
+          docker build -f apps/web/Dockerfile \
+            --build-arg API_INTERNAL_URL=${{ steps.api-fqdn.outputs.url }} \
+            -t ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-web:${{ steps.tag.outputs.tag }} \
+            -t ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-web:latest .
+          docker push ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-web:${{ steps.tag.outputs.tag }}
+          docker push ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-web:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Update staging API Container App
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name atms-staging-api \
+              --resource-group ${{ secrets.STAGING_AZURE_RESOURCE_GROUP }} \
+              --image ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-api:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Update staging web Container App
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name atms-staging-web \
+              --resource-group ${{ secrets.STAGING_AZURE_RESOURCE_GROUP }} \
+              --image ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-web:${{ needs.build-and-push.outputs.image-tag }}
+
+      - name: Sync staging WEB_ORIGIN to the web Container App's actual FQDN
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            web_fqdn=$(az containerapp show \
+              --name atms-staging-web \
+              --resource-group ${{ secrets.STAGING_AZURE_RESOURCE_GROUP }} \
+              --query properties.configuration.ingress.fqdn -o tsv)
+            az containerapp update \
+              --name atms-staging-api \
+              --resource-group ${{ secrets.STAGING_AZURE_RESOURCE_GROUP }} \
+              --set-env-vars WEB_ORIGIN="https://$web_fqdn"
