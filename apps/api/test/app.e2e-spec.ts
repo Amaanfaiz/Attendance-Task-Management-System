@@ -472,4 +472,90 @@ describe('Attendance & Task Management (e2e)', () => {
       expect(afterLogout.status).toBe(401);
     });
   });
+
+  // These fire two requests with Promise.all rather than one after another -
+  // the sequential-looking "rejects a second concurrent clock-in/timer" tests
+  // above only prove the second request is rejected once the first has already
+  // committed. This proves the same thing when both hit the partial unique
+  // index at the same instant, which is the actual race BR-002/BR-003 and
+  // NFR-006 are about.
+  describe('True concurrent requests (NFR-006)', () => {
+    it('two simultaneous clock-ins for the same user: exactly one succeeds', async () => {
+      const email = 'e2e-race-clockin@atms.local';
+      const passwordHash = await argon2.hash('RacePass123', {
+        type: argon2.argon2id,
+      });
+      const user = await prisma.user.create({
+        data: {
+          firstName: 'Race',
+          surname: 'ClockIn',
+          email,
+          phoneNumber: '0000000099',
+          passwordHash,
+          role: 'EMPLOYEE',
+          status: 'ACTIVE',
+        },
+      });
+      const agent = request.agent(httpServer);
+      await agent
+        .post('/api/v1/auth/login')
+        .send({ email, password: 'RacePass123' });
+
+      const [first, second] = await Promise.all([
+        agent.post('/api/v1/attendance/clock-in'),
+        agent.post('/api/v1/attendance/clock-in'),
+      ]);
+
+      const statuses = [first.status, second.status].sort();
+      expect(statuses).toEqual([200, 409]);
+
+      const activeSessions = await prisma.attendanceSession.count({
+        where: { userId: user.id, status: { in: ['ACTIVE', 'ON_BREAK'] } },
+      });
+      expect(activeSessions).toBe(1);
+    });
+
+    it('two simultaneous task-timer starts for the same user: exactly one succeeds', async () => {
+      const email = 'e2e-race-timer@atms.local';
+      const passwordHash = await argon2.hash('RacePass123', {
+        type: argon2.argon2id,
+      });
+      const user = await prisma.user.create({
+        data: {
+          firstName: 'Race',
+          surname: 'Timer',
+          email,
+          phoneNumber: '0000000098',
+          passwordHash,
+          role: 'EMPLOYEE',
+          status: 'ACTIVE',
+        },
+      });
+      const task = await adminAgent.post('/api/v1/tasks').send({
+        title: 'Race timer task',
+        priority: 'HIGH',
+        assigneeId: user.id,
+      });
+      expect(task.status).toBe(201);
+
+      const agent = request.agent(httpServer);
+      await agent
+        .post('/api/v1/auth/login')
+        .send({ email, password: 'RacePass123' });
+      await agent.post('/api/v1/attendance/clock-in');
+
+      const [first, second] = await Promise.all([
+        agent.post('/api/v1/task-timers/start').send({ taskId: task.body.id }),
+        agent.post('/api/v1/task-timers/start').send({ taskId: task.body.id }),
+      ]);
+
+      const statuses = [first.status, second.status].sort();
+      expect(statuses).toEqual([201, 409]);
+
+      const runningTimers = await prisma.taskTimeEntry.count({
+        where: { userId: user.id, status: 'RUNNING' },
+      });
+      expect(runningTimers).toBe(1);
+    });
+  });
 });
