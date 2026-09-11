@@ -45,14 +45,19 @@ npm run dev:api    # http://localhost:3001/api/v1  (Swagger at /api/docs)
 npm run dev:web    # http://localhost:3000
 ```
 
-Seeded accounts, straight out of `npm run prisma:seed` with no overrides (change these
-before any real deployment — see `SEED_ADMIN_PASSWORD`/`SEED_EMPLOYEE_PASSWORD` in
-`prisma/seed.ts`):
+`npm run prisma:seed` creates two **local-only** placeholder accounts, useful for getting
+a fresh clone running immediately:
 
 | Role | Email | Password |
 |---|---|---|
 | Administrator | `admin@atms.local` | `Admin123!Change` |
 | Employee | `employee@atms.local` | `Employee123!Change` |
+
+> These are fixed defaults baked into `prisma/seed.ts`, not real credentials for any
+> hosted environment — override them via `SEED_ADMIN_PASSWORD`/`SEED_EMPLOYEE_PASSWORD`
+> for anything beyond a local database. Staging and production are always seeded with
+> their own generated passwords (see [Live demo](#live-demo-azure) below) and never use
+> these values.
 
 ## Live demo (Azure)
 
