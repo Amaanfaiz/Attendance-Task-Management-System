@@ -56,8 +56,11 @@ export default function AttendanceDayDetailPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <button onClick={() => router.push('/attendance')} className="text-sm text-slate-500 hover:underline">
-        ← Back to Attendance History
+      {/* router.back() rather than a hardcoded destination - this page is reached
+          both from My Attendance History (SCR-005) and, for an admin viewing
+          another user's session, from Attendance Logs (SCR-017). */}
+      <button onClick={() => router.back()} className="text-sm text-slate-500 hover:underline">
+        ← Back
       </button>
 
       <div className="flex items-center justify-between">

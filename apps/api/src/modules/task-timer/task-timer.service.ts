@@ -216,4 +216,21 @@ export class TaskTimerService {
       orderBy: { startAt: 'asc' },
     });
   }
+
+  // SCR-009 My Task Time History - daily-log above is scoped to one day (used
+  // by My Day's "today" view); this is the across-dates equivalent of
+  // AttendanceService.getMyHistory, same from/to inclusive-day handling.
+  async getHistory(userId: string, from?: string, to?: string) {
+    return this.prisma.taskTimeEntry.findMany({
+      where: {
+        userId,
+        startAt: {
+          gte: from ? getUtcDayRange(from).start : undefined,
+          lte: to ? new Date(getUtcDayRange(to).end.getTime() - 1) : undefined,
+        },
+      },
+      include: { task: { select: { id: true, title: true, status: true } } },
+      orderBy: { startAt: 'desc' },
+    });
+  }
 }

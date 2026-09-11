@@ -60,4 +60,13 @@ export class TaskTimerController {
       date ?? new Date().toISOString(),
     );
   }
+
+  @Get('history')
+  history(
+    @CurrentUser('id') userId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.taskTimerService.getHistory(userId, from, to);
+  }
 }

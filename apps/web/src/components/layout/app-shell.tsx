@@ -14,6 +14,7 @@ import { NotificationBell } from './notification-bell';
 const employeeLinks = [
   { href: '/my-day', label: 'My Day' },
   { href: '/tasks', label: 'My Tasks' },
+  { href: '/tasks/history', label: 'Task Time History' },
   { href: '/attendance', label: 'Attendance History' },
   { href: '/corrections', label: 'My Corrections' },
   { href: '/profile', label: 'Profile' },
@@ -22,6 +23,7 @@ const employeeLinks = [
 const adminLinks = [
   { href: '/admin/dashboard', label: 'Admin Dashboard' },
   { href: '/admin/live', label: 'Live Attendance' },
+  { href: '/admin/attendance-logs', label: 'Attendance Logs' },
   { href: '/admin/users', label: 'User Management' },
   { href: '/admin/tasks', label: 'Task Management' },
   { href: '/admin/reports', label: 'Reports' },
