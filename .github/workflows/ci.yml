@@ -87,3 +87,109 @@ jobs:
 
       - name: Build web image
         run: docker build -f apps/web/Dockerfile -t atms-web:${{ github.sha }} .
+
+  # SRS §14 Testing Strategy / RISK-010: "End-to-end Playwright tests for
+  # Register -> Login -> Clock In -> Task -> Break -> Switch -> Clock Out."
+  # Runs a real web + API + Postgres stack (not the in-process Nest testing
+  # module app.e2e-spec.ts uses) and drives it with a real Chromium browser,
+  # since that's the specific thing the SRS names and the other e2e suite
+  # doesn't cover.
+  playwright-e2e:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: atms
+          POSTGRES_PASSWORD: atms_ci_password
+          POSTGRES_DB: atms_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U atms -d atms_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://atms:atms_ci_password@localhost:5432/atms_test?schema=public
+      JWT_ACCESS_SECRET: ci_access_secret
+      JWT_REFRESH_SECRET: ci_refresh_secret
+      NODE_ENV: production
+      WEB_ORIGIN: http://localhost:3000
+      API_INTERNAL_URL: http://localhost:3001
+      PORT: 3001
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build -w packages/shared
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate -w apps/api
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+
+      - name: Seed database
+        run: npm run prisma:seed -w apps/api
+
+      - name: Build API
+        run: npm run build -w apps/api
+
+      - name: Build web
+        # NODE_ENV=production above would make `next build` skip installing
+        # devDependencies-only tooling it still needs at build time in some
+        # setups, so build explicitly with development semantics for the
+        # build step itself, then run with NODE_ENV=production below.
+        run: npm run build -w apps/web
+        env:
+          NODE_ENV: development
+
+      - name: Start API
+        run: nohup npm run start -w apps/api > api.log 2>&1 &
+
+      - name: Wait for API readiness
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/api/v1/ready > /dev/null; then echo "API ready"; exit 0; fi
+            sleep 2
+          done
+          echo "API did not become ready"; cat api.log; exit 1
+
+      - name: Start web
+        run: nohup npm run start -w apps/web -- -p 3000 > web.log 2>&1 &
+
+      - name: Wait for web readiness
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000 > /dev/null; then echo "Web ready"; exit 0; fi
+            sleep 2
+          done
+          echo "Web did not become ready"; cat web.log; exit 1
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+
+      - name: Run Playwright tests
+        run: npm run test:e2e -w apps/web
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
