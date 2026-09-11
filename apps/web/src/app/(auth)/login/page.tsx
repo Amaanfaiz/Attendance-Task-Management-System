@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LoginInput, loginSchema } from '@atms/shared';
+import { LoginInput, UserRole, loginSchema } from '@atms/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -26,9 +26,13 @@ function LoginForm() {
   const onSubmit = async (values: LoginInput) => {
     setServerError(null);
     try {
-      await api.post('/auth/login', values);
+      // RISK-015: Auditor has no attendance/tasks of its own - /my-day would
+      // land it on a page full of controls (Clock In, task timers) that its
+      // own role can't actually use (blocked server-side, but a confusing
+      // dead end regardless). Route it straight to its actual landing page.
+      const result = await api.post<{ role: string }>('/auth/login', values);
       await queryClient.invalidateQueries({ queryKey: ['users', 'me'] });
-      router.push('/my-day');
+      router.push(result.role === UserRole.AUDITOR ? '/admin/reports' : '/my-day');
     } catch (err) {
       setServerError(err instanceof ApiError ? err.message : 'Something went wrong');
     }

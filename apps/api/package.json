@@ -39,7 +39,7 @@
     "@nestjs/swagger": "^7.4.0",
     "@nestjs/throttler": "^5.2.0",
     "@prisma/client": "^5.18.0",
-    "argon2": "^0.40.3",
+    "argon2": "^0.45.1",
     "cookie-parser": "^1.4.6",
     "csv-stringify": "^6.5.1",
     "exceljs": "^4.4.0",

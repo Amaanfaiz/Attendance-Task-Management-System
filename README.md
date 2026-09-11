@@ -56,13 +56,18 @@ before any real deployment — see `SEED_ADMIN_PASSWORD`/`SEED_EMPLOYEE_PASSWORD
 
 ## Live demo (Azure)
 
-**https://atms-web.calmmeadow-ac85e2f9.centralus.azurecontainerapps.io**
+**https://atms-web.calmmeadow-ac85e2f9.centralus.azurecontainerapps.io** (production)
+
+**https://atms-staging-web.calmmeadow-ac85e2f9.centralus.azurecontainerapps.io** (staging)
 
 Hosted per [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) on Azure Container Apps + Azure
-Database for PostgreSQL Flexible Server. This environment has its own dedicated
-admin/employee accounts, separate from the local seed defaults above — since this is a
-public repository, ask the project owner for those credentials rather than looking for
-them here.
+Database for PostgreSQL Flexible Server. Staging is a fully separate deployment (own
+database, own images, own credentials) used to verify changes before they reach
+production — see the "Staging environment" section of `docs/DEPLOYMENT.md` for how it's
+provisioned and its one architectural compromise. Both environments have their own
+dedicated admin/employee accounts, separate from the local seed defaults above — since
+this is a public repository, ask the project owner for those credentials rather than
+looking for them here.
 
 ## Running the full stack in Docker
 

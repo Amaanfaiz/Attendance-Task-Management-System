@@ -1,6 +1,12 @@
 export enum UserRole {
   EMPLOYEE = 'EMPLOYEE',
   ADMINISTRATOR = 'ADMINISTRATOR',
+  // RISK-015: read-only role matching the SRS's "Auditor / Management Viewer"
+  // stakeholder persona (§3) - can view reports/audit/live attendance but
+  // cannot edit operational records. Enforced server-side by AuditorScopeGuard
+  // (default-deny for this role except routes marked @AuditorAllowed()), not
+  // just hidden in the UI.
+  AUDITOR = 'AUDITOR',
 }
 
 export enum UserStatus {
