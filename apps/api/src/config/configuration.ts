@@ -17,7 +17,7 @@ export default () => ({
     // "email channel not configured" and skips sending rather than throwing, so the
     // rest of the app never depends on this being present (AC-011-001-01: email is
     // one of two channels, gated by settings, not a hard requirement).
-    resendApiKey: process.env.RESEND_API_KEY,
-    from: process.env.EMAIL_FROM ?? 'ATMS <onboarding@resend.dev>',
+    acsConnectionString: process.env.ACS_EMAIL_CONNECTION_STRING,
+    from: process.env.EMAIL_FROM ?? 'ATMS <DoNotReply@azurecomm.net>',
   },
 });

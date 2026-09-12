@@ -148,7 +148,7 @@ export class AuthService {
   // SRS Section 10 explicitly requires reset tokens never be logged - the token is
   // never written to the logger, only sent by email or (outside production only,
   // see forgotPassword) returned directly to the requester so local dev stays
-  // testable without a Resend key.
+  // testable without an email provider configured.
   async createPasswordResetToken(
     userId: string,
     email: string,
