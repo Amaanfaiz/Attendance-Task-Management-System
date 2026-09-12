@@ -148,6 +148,47 @@ Actions tab. It requires the `STAGING_ACR_NAME` and
 `STAGING_AZURE_RESOURCE_GROUP` repository secrets (alongside the existing
 `AZURE_CREDENTIALS`) — set up once when staging was first provisioned.
 
+## Email delivery
+
+Password-reset links and notification emails are sent through Azure
+Communication Services (ACS) Email, not a third-party provider. The setup:
+
+- An Email Communication Service resource (`atms-email`) holding an Azure
+  Managed Domain (`AzureManagedDomain`) - free, auto-verified with zero DNS
+  records to configure (DKIM/DKIM2/DMARC/Domain/SPF are all verified
+  automatically), fixed sender address
+  `DoNotReply@<resource-guid>.azurecomm.net`.
+- A separate Communication Services resource (`atms-communication`) with the
+  managed domain linked into its `linkedDomains`, holding the actual
+  connection string used to authenticate.
+- `apps/api/src/common/services/email.service.ts` sends via
+  `@azure/communication-email`'s `EmailClient.beginSend()`, which returns a
+  long-running-operation poller - the result must be explicitly polled to
+  completion and its `status` checked against
+  `KnownEmailSendStatus.Succeeded`, since (like the previous Resend
+  integration) a resolved promise does not by itself mean the send
+  succeeded.
+- `ACS_EMAIL_CONNECTION_STRING` (Container App secret `acs-email-connection-string`)
+  and `EMAIL_FROM` (plain env var) are set directly via `az containerapp
+  update`, the same way `JWT_ACCESS_SECRET` is wired - not IaC'd in
+  `infra/main.bicep`/`infra/staging.bicep`.
+
+**Real constraint worth knowing:** `senderAddress` in this SDK version is a
+bare email address string - it does not accept a `"Display Name <addr>"`
+form the way Resend's `from` field did. Setting it to a display-name form
+fails every send with `RestError: Request body validation error. See
+property 'senderAddress'` (hit and fixed live during the cutover, 2026-09-12).
+
+**Why ACS over Resend (RISK-009):** Resend's free sandbox only delivers to
+the account owner's own inbox - any other recipient is rejected, which made
+password reset and notifications undeliverable to real users in production.
+Azure Managed Domain has no recipient restriction at all; it's rate-limited
+instead (5 emails/minute, 10/hour on the free managed domain - a custom
+domain would raise this to 30/min, 100/hour with room to request more).
+Live-verified on both staging and production by registering a real test
+account with a real external inbox and triggering a password-reset email -
+both arrived, logged with real ACS operation IDs.
+
 ## What's still open
 
 - Custom domain + managed TLS certificate isn't set up — Container Apps' default `*.azurecontainerapps.io` domain ships with HTTPS already, which satisfies NFR-003 for the demo, but a real go-live would want your own domain.

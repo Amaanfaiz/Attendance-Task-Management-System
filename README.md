@@ -126,10 +126,5 @@ Employee and Administrator perspectives) is:
 
 ## Known limitations
 
-- **Password-reset and notification emails are undeliverable in production for any user
-  other than the Resend account owner.** `EMAIL_FROM` is still Resend's shared sandbox
-  address (`onboarding@resend.dev`); Resend rejects delivery to any other recipient until
-  a custom domain is verified. The reset-token mechanism itself works correctly — this is
-  specifically an email-delivery gap (tracker: DEF-022, RISK-009).
 - Firefox (Gecko) has not been separately verified; the app has been confirmed working in
   Chrome, Edge and Safari.

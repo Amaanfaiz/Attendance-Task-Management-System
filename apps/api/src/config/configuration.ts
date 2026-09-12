@@ -18,6 +18,9 @@ export default () => ({
     // rest of the app never depends on this being present (AC-011-001-01: email is
     // one of two channels, gated by settings, not a hard requirement).
     acsConnectionString: process.env.ACS_EMAIL_CONNECTION_STRING,
-    from: process.env.EMAIL_FROM ?? 'ATMS <DoNotReply@azurecomm.net>',
+    // ACS's senderAddress is a bare address string (no "Display Name <addr>" form
+    // like Resend accepted) - a value with a display name fails with
+    // RestError: Request body validation error. See property 'senderAddress'.
+    from: process.env.EMAIL_FROM ?? 'DoNotReply@azurecomm.net',
   },
 });
