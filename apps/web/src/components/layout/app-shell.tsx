@@ -112,13 +112,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       key={link.href}
       href={link.href}
       className={clsx(
-        'rounded-md px-3 py-2 text-sm font-medium',
-        pathname === link.href ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100',
+        'rounded-lg border-l-2 px-3 py-2 text-sm font-medium transition-colors',
+        pathname === link.href
+          ? 'border-brand-600 bg-brand-50 text-brand-700'
+          : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900',
       )}
     >
       {link.label}
     </Link>
   );
+
+  const initials = `${user.firstName?.[0] ?? ''}${user.surname?.[0] ?? ''}`.toUpperCase();
 
   return (
     // AC-008-005-03: was min-h-screen, so the container could grow taller than
@@ -128,17 +132,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // header stays fixed, as the AC requires.
     <div className="flex h-screen">
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 md:flex">
-        <div className="mb-6 px-2 text-lg font-semibold text-slate-900">ATMS</div>
-        <nav className="flex flex-1 flex-col gap-1">{links.map(navLink)}</nav>
-        <div className="border-t border-slate-200 pt-3 text-sm">
-          <p className="font-medium text-slate-900">
-            {user.firstName} {user.surname}
-          </p>
-          <p className="text-xs text-slate-500">{user.role}</p>
-          <button onClick={logout} className="mt-2 text-xs text-slate-500 underline hover:text-slate-800">
-            Log out
-          </button>
+        <div className="mb-6 flex items-center gap-2 px-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-600 text-xs font-bold text-white">
+            AT
+          </span>
+          <span className="text-lg font-semibold text-slate-900">ATMS</span>
         </div>
+        <nav className="flex flex-1 flex-col gap-1">{links.map(navLink)}</nav>
+        <div className="flex items-center gap-2.5 border-t border-slate-200 pt-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
+            {initials}
+          </span>
+          <div className="min-w-0 text-sm">
+            <p className="truncate font-medium text-slate-900">
+              {user.firstName} {user.surname}
+            </p>
+            <p className="text-xs text-slate-500">{user.role}</p>
+          </div>
+        </div>
+        <button onClick={logout} className="mt-2 self-start text-xs text-slate-500 underline hover:text-brand-700">
+          Log out
+        </button>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3">
