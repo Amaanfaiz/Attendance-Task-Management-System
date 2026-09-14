@@ -7,6 +7,7 @@ import { api, exportUrl } from '@/lib/api-client';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { UnallocatedByEmployeeChart } from '@/components/charts/unallocated-by-employee-chart';
 
 const REPORTS = [
   { value: 'attendance', label: 'Daily Attendance' },
@@ -33,6 +34,15 @@ interface BreakRow {
   end: string;
   durationMinutes: number;
   status: string;
+}
+
+interface UnallocatedRow {
+  date: string;
+  employee: string;
+  netWorkingMinutes: number;
+  taskMinutes: number;
+  unallocatedMinutes: number;
+  dataQualityException: boolean;
 }
 
 interface UserOption {
@@ -102,6 +112,24 @@ export default function ReportsPage() {
     }
     return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
   }, [report, data]);
+
+  // AC-010-004-01/03: aggregates the same rows the table below shows (respecting
+  // the hide-zero-unallocated toggle) into one bar per employee, since the raw
+  // per-session table on its own doesn't make "who has the most unallocated
+  // time this period" fast to answer at a glance.
+  const unallocatedByEmployee = useMemo(() => {
+    if (report !== 'unallocated' || !data?.rows) return [];
+    const rows = data.rows as unknown as UnallocatedRow[];
+    const byEmployee = new Map<string, { employee: string; unallocatedMinutes: number; hasException: boolean }>();
+    for (const r of rows) {
+      if (hideZeroUnallocated && r.unallocatedMinutes === 0) continue;
+      const existing = byEmployee.get(r.employee) ?? { employee: r.employee, unallocatedMinutes: 0, hasException: false };
+      existing.unallocatedMinutes += r.unallocatedMinutes;
+      existing.hasException = existing.hasException || r.dataQualityException;
+      byEmployee.set(r.employee, existing);
+    }
+    return Array.from(byEmployee.values());
+  }, [report, data, hideZeroUnallocated]);
 
   const employeeSummary = useMemo(() => {
     if (report !== 'attendance' || !data?.rows) return [];
@@ -240,6 +268,19 @@ export default function ReportsPage() {
               </tbody>
             </table>
           </div>
+        </Card>
+      )}
+
+      {report === 'unallocated' && (
+        <Card>
+          <CardTitle>Unallocated time by employee, {from} – {to}</CardTitle>
+          {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+          <UnallocatedByEmployeeChart rows={unallocatedByEmployee} />
+          {unallocatedByEmployee.some((r) => r.hasException) && (
+            <p className="mt-2 text-xs text-red-600">
+              Red bars have a data-quality exception (task time appears to exceed attendance time) — check before acting on the number.
+            </p>
+          )}
         </Card>
       )}
 

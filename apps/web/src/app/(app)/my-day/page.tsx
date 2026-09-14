@@ -11,6 +11,7 @@ import { useElapsedSeconds, formatDuration } from '@/lib/use-elapsed';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { DayBreakdownChart } from '@/components/charts/day-breakdown-chart';
 
 function invalidateAll(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: ['attendance'] });
@@ -175,16 +176,25 @@ export default function MyDayPage() {
 
       <Card>
         <CardTitle>Today&apos;s Totals</CardTitle>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-          <Stat label="Worked" value={summary ? formatMinutes(summary.netWorkingMinutes) : '—'} />
-          <Stat label="Task time" value={summary ? formatMinutes(summary.taskMinutes) : '—'} />
-          <Stat label="Break time" value={summary ? formatMinutes(summary.breakMinutes) : '—'} />
-          <Stat
-            label="Unallocated"
-            value={summary ? formatMinutes(summary.unallocatedMinutes) : '—'}
-            warn={summary?.hasDataQualityException}
-          />
-          <Stat label="Sessions" value={summary ? String(summary.sessionCount) : '—'} />
+        <div className="grid gap-6 md:grid-cols-[auto_1fr] md:items-center">
+          {summary && (
+            <DayBreakdownChart
+              taskMinutes={summary.taskMinutes}
+              breakMinutes={summary.breakMinutes}
+              unallocatedMinutes={summary.unallocatedMinutes}
+            />
+          )}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+            <Stat label="Worked" value={summary ? formatMinutes(summary.netWorkingMinutes) : '—'} />
+            <Stat label="Task time" value={summary ? formatMinutes(summary.taskMinutes) : '—'} />
+            <Stat label="Break time" value={summary ? formatMinutes(summary.breakMinutes) : '—'} />
+            <Stat
+              label="Unallocated"
+              value={summary ? formatMinutes(summary.unallocatedMinutes) : '—'}
+              warn={summary?.hasDataQualityException}
+            />
+            <Stat label="Sessions" value={summary ? String(summary.sessionCount) : '—'} />
+          </div>
         </div>
         {summary?.hasDataQualityException && (
           <p className="mt-3 text-xs text-red-600">
