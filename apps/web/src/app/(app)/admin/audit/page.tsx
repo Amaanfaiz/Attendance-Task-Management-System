@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { AuditAction } from '@atms/shared';
 import { api } from '@/lib/api-client';
 import { Card } from '@/components/ui/card';
-import { Field, Input } from '@/components/ui/input';
+import { Field } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
 interface AuditRow {
@@ -42,7 +44,14 @@ export default function AuditLogPage() {
       <Card>
         <div className="mb-3">
           <Field label="Filter by action">
-            <Input placeholder="e.g. CORRECTION_APPROVED" value={action} onChange={(e) => setAction(e.target.value)} />
+            <Select uiSize="sm" className="w-auto" value={action} onChange={(e) => setAction(e.target.value)}>
+              <option value="">All</option>
+              {Object.values(AuditAction).map((a) => (
+                <option key={a} value={a}>
+                  {a.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </Select>
           </Field>
         </div>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
