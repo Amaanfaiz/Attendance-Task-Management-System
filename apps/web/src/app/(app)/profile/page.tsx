@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Save } from 'lucide-react';
 import { UpdateOwnProfileInput, updateOwnProfileSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useCurrentUser } from '@/lib/use-current-user';
@@ -78,7 +79,7 @@ export default function ProfilePage() {
           <Field label="Phone number" error={errors.phoneNumber?.message}>
             <Input {...register('phoneNumber')} />
           </Field>
-          <Button type="submit" loading={isSubmitting}>
+          <Button icon={<Save size={16} aria-hidden="true" />} type="submit" loading={isSubmitting}>
             Save
           </Button>
         </form>

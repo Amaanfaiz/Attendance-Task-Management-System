@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { UserPlus, Check, X } from 'lucide-react';
 import { AdminCreateUserInput, UserRole, UserStatus, adminCreateUserSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useCurrentUser } from '@/lib/use-current-user';
@@ -121,7 +122,11 @@ function UserManagementPageInner() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-900">User Management</h1>
         {canEdit && (
-          <Button variant="secondary" onClick={() => setShowCreate((v) => !v)}>
+          <Button
+            icon={!showCreate && <UserPlus size={16} aria-hidden="true" />}
+            variant="secondary"
+            onClick={() => setShowCreate((v) => !v)}
+          >
             {showCreate ? 'Cancel' : 'New User'}
           </Button>
         )}
@@ -180,7 +185,7 @@ function UserManagementPageInner() {
               A password-setup link will be emailed to the new user (falls back to the server log if email isn&rsquo;t
               configured or fails to send).
             </p>
-            <Button type="submit" loading={isSubmitting}>
+            <Button icon={<Check size={16} aria-hidden="true" />} type="submit" loading={isSubmitting}>
               Create
             </Button>
           </form>
@@ -301,7 +306,7 @@ function UserManagementPageInner() {
                   <td className="py-2.5 pr-4">
                     {!canEdit ? null : u.status === UserStatus.PENDING ? (
                       <div className="flex flex-wrap items-center gap-2">
-                        <Button variant="secondary" onClick={() => approve.mutate(u.id)}>
+                        <Button icon={<Check size={16} aria-hidden="true" />} variant="secondary" onClick={() => approve.mutate(u.id)}>
                           Approve
                         </Button>
                         <div className="w-36">
@@ -313,6 +318,7 @@ function UserManagementPageInner() {
                           />
                         </div>
                         <Button
+                          icon={<X size={16} aria-hidden="true" />}
                           variant="danger"
                           loading={reject.isPending}
                           onClick={() => reject.mutate({ id: u.id, reason: rejectReason[u.id] })}

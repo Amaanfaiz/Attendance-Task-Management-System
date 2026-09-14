@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, Save } from 'lucide-react';
 import { UpdateAppSettingsInput, updateAppSettingsSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useCreateDepartment, useDepartments } from '@/lib/use-departments';
@@ -50,6 +51,7 @@ function DepartmentsCard() {
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering" />
         </Field>
         <Button
+          icon={<Plus size={16} aria-hidden="true" />}
           type="button"
           variant="secondary"
           disabled={name.trim().length === 0}
@@ -167,7 +169,7 @@ export default function AdminSettingsPage() {
           </p>
         </Card>
 
-        <Button type="submit" loading={isSubmitting}>
+        <Button icon={<Save size={16} aria-hidden="true" />} type="submit" loading={isSubmitting}>
           Save settings
         </Button>
       </form>

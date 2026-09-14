@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useQuery } from '@tanstack/react-query';
+import { Play, Download, FileSpreadsheet } from 'lucide-react';
 import { UserStatus } from '@atms/shared';
 import { api, exportUrl } from '@/lib/api-client';
 import { useDepartments } from '@/lib/use-departments';
@@ -244,12 +245,12 @@ export default function ReportsPage() {
               </Select>
             </Field>
           )}
-          <Button onClick={() => refetch()}>Run</Button>
+          <Button icon={<Play size={16} aria-hidden="true" />} onClick={() => refetch()}>Run</Button>
           <a href={exportUrl(`/reports/${report}`, { from, to, format: 'csv', ...extraParams })}>
-            <Button variant="secondary">Export CSV</Button>
+            <Button icon={<Download size={16} aria-hidden="true" />} variant="secondary">Export CSV</Button>
           </a>
           <a href={exportUrl(`/reports/${report}`, { from, to, format: 'xlsx', ...extraParams })}>
-            <Button variant="secondary">Export XLSX</Button>
+            <Button icon={<FileSpreadsheet size={16} aria-hidden="true" />} variant="secondary">Export XLSX</Button>
           </a>
           {report === 'attendance' && (
             <Button

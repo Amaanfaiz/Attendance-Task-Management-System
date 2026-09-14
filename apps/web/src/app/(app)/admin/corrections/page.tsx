@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Check, X } from 'lucide-react';
 import { UserStatus } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { Card, CardTitle } from '@/components/ui/card';
@@ -171,7 +172,12 @@ function DirectCorrectionForm() {
         >
           <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why this record needs correcting" />
         </Field>
-        <Button disabled={!selected || reason.length < 10} loading={submit.isPending} onClick={() => { setError(null); submit.mutate(); }}>
+        <Button
+          icon={<Check size={16} aria-hidden="true" />}
+          disabled={!selected || reason.length < 10}
+          loading={submit.isPending}
+          onClick={() => { setError(null); submit.mutate(); }}
+        >
           Apply Correction
         </Button>
       </div>
@@ -244,10 +250,10 @@ export default function AdminCorrectionsPage() {
                 />
               </Field>
               <div className="mt-2 flex gap-2">
-                <Button onClick={() => decide.mutate({ id: c.id, approve: true })} loading={decide.isPending}>
+                <Button icon={<Check size={16} aria-hidden="true" />} onClick={() => decide.mutate({ id: c.id, approve: true })} loading={decide.isPending}>
                   Approve
                 </Button>
-                <Button variant="danger" onClick={() => decide.mutate({ id: c.id, approve: false })}>
+                <Button icon={<X size={16} aria-hidden="true" />} variant="danger" onClick={() => decide.mutate({ id: c.id, approve: false })}>
                   Reject
                 </Button>
               </div>

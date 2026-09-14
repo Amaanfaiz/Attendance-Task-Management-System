@@ -6,11 +6,12 @@ import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ListPlus, Check } from 'lucide-react';
 import { CreateTaskInput, TaskPriority, TaskStatus, UserStatus, createTaskSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useAllTasks } from '@/lib/use-tasks';
 import { formatMinutes } from '@/lib/use-reconciliation';
-import { Card } from '@/components/ui/card';
+import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -90,13 +91,18 @@ function AdminTasksPageInner() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-900">Task Management</h1>
-        <Button variant="secondary" onClick={() => setShowCreate((v) => !v)}>
+        <Button
+          icon={!showCreate && <ListPlus size={16} aria-hidden="true" />}
+          variant="secondary"
+          onClick={() => setShowCreate((v) => !v)}
+        >
           {showCreate ? 'Cancel' : 'New Task'}
         </Button>
       </div>
 
       {showCreate && (
         <Card>
+          <CardTitle>Create Task</CardTitle>
           <form onSubmit={handleSubmit((v) => { setError(null); create.mutate(v); })} className="space-y-3">
             {error && <p className="rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p>}
             <Field label="Title" error={errors.title?.message}>
@@ -132,7 +138,7 @@ function AdminTasksPageInner() {
             <Field label="Due date" error={errors.dueDate?.message}>
               <Input type="date" {...register('dueDate')} />
             </Field>
-            <Button type="submit" loading={isSubmitting}>
+            <Button icon={<Check size={16} aria-hidden="true" />} type="submit" loading={isSubmitting}>
               Create Task
             </Button>
           </form>

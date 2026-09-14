@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Send } from 'lucide-react';
 import { api, ApiError } from '@/lib/api-client';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -105,6 +106,7 @@ function CorrectionForm({
           <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why this record needs correcting" />
         </Field>
         <Button
+          icon={<Send size={16} aria-hidden="true" />}
           disabled={!targetId || reason.length < 10}
           loading={submit.isPending}
           onClick={() => {

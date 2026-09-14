@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { LogIn } from 'lucide-react';
 import { LoginInput, UserRole, loginSchema } from '@atms/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '@/lib/api-client';
@@ -61,7 +62,7 @@ function LoginForm() {
           Create an account
         </Link>
       </div>
-      <Button type="submit" className="w-full" loading={isSubmitting}>
+      <Button icon={<LogIn size={16} aria-hidden="true" />} type="submit" className="w-full" loading={isSubmitting}>
         Sign in
       </Button>
     </form>

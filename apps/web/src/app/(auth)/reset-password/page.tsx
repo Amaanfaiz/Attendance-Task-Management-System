@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { KeyRound } from 'lucide-react';
 import { ResetPasswordInput, resetPasswordSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -58,7 +59,7 @@ function ResetPasswordForm() {
       <Field label="Confirm password" error={errors.confirmPassword?.message}>
         <Input type="password" {...register('confirmPassword')} />
       </Field>
-      <Button type="submit" className="w-full" loading={isSubmitting}>
+      <Button icon={<KeyRound size={16} aria-hidden="true" />} type="submit" className="w-full" loading={isSubmitting}>
         Reset password
       </Button>
     </form>

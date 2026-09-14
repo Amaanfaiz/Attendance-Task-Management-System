@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Send } from 'lucide-react';
 import { ForgotPasswordInput, forgotPasswordSchema } from '@atms/shared';
 import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -41,7 +42,7 @@ export default function ForgotPasswordPage() {
       <Field label="Email" error={errors.email?.message}>
         <Input type="email" {...register('email')} />
       </Field>
-      <Button type="submit" className="w-full" loading={isSubmitting}>
+      <Button icon={<Send size={16} aria-hidden="true" />} type="submit" className="w-full" loading={isSubmitting}>
         Send reset link
       </Button>
     </form>

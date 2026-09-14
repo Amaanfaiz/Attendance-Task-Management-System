@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { UserPlus } from 'lucide-react';
 import { RegisterInput, registerSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -72,7 +73,7 @@ export default function RegisterPage() {
           Already have an account?
         </Link>
       </div>
-      <Button type="submit" className="w-full" loading={isSubmitting}>
+      <Button icon={<UserPlus size={16} aria-hidden="true" />} type="submit" className="w-full" loading={isSubmitting}>
         Register
       </Button>
     </form>

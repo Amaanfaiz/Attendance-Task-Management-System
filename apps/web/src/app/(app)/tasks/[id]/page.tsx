@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Save } from 'lucide-react';
 import { TaskPriority, TaskStatus, UserRole, UserStatus, UpdateTaskInput, updateTaskSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useTask } from '@/lib/use-tasks';
@@ -187,7 +188,7 @@ export default function TaskDetailPage() {
             <Field label="Due date" error={errors.dueDate?.message}>
               <Input type="date" {...register('dueDate')} />
             </Field>
-            <Button type="submit" loading={isSubmitting}>
+            <Button icon={<Save size={16} aria-hidden="true" />} type="submit" loading={isSubmitting}>
               Save changes
             </Button>
           </form>
