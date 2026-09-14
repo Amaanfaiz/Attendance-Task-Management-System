@@ -5,11 +5,47 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
+import {
+  Sun,
+  ListTodo,
+  History,
+  CalendarClock,
+  Wrench,
+  User,
+  LayoutDashboard,
+  Radio,
+  ClipboardList,
+  Users,
+  ListChecks,
+  BarChart3,
+  FileCheck,
+  ScrollText,
+  Settings,
+  type LucideIcon,
+} from 'lucide-react';
 import { UserRole } from '@atms/shared';
 import { useCurrentUser } from '@/lib/use-current-user';
 import { api } from '@/lib/api-client';
 import { GlobalTimerBar } from './global-timer-bar';
 import { NotificationBell } from './notification-bell';
+
+const navIcons: Record<string, LucideIcon> = {
+  '/my-day': Sun,
+  '/tasks': ListTodo,
+  '/tasks/history': History,
+  '/attendance': CalendarClock,
+  '/corrections': Wrench,
+  '/profile': User,
+  '/admin/dashboard': LayoutDashboard,
+  '/admin/live': Radio,
+  '/admin/attendance-logs': ClipboardList,
+  '/admin/users': Users,
+  '/admin/tasks': ListChecks,
+  '/admin/reports': BarChart3,
+  '/admin/corrections': FileCheck,
+  '/admin/audit': ScrollText,
+  '/admin/settings': Settings,
+};
 
 const employeeLinks = [
   { href: '/my-day', label: 'My Day' },
@@ -107,20 +143,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.replace('/login');
   };
 
-  const navLink = (link: { href: string; label: string }) => (
-    <Link
-      key={link.href}
-      href={link.href}
-      className={clsx(
-        'rounded-lg border-l-2 px-3 py-2 text-sm font-medium transition-colors',
-        pathname === link.href
-          ? 'border-brand-600 bg-brand-50 text-brand-700'
-          : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-      )}
-    >
-      {link.label}
-    </Link>
-  );
+  const navLink = (link: { href: string; label: string }) => {
+    const Icon = navIcons[link.href];
+    return (
+      <Link
+        key={link.href}
+        href={link.href}
+        className={clsx(
+          'flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-sm font-medium transition-colors',
+          pathname === link.href
+            ? 'border-brand-600 bg-brand-50 text-brand-700'
+            : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+        )}
+      >
+        {Icon && <Icon size={16} strokeWidth={2} className="shrink-0" aria-hidden="true" />}
+        {link.label}
+      </Link>
+    );
+  };
 
   const initials = `${user.firstName?.[0] ?? ''}${user.surname?.[0] ?? ''}`.toUpperCase();
 

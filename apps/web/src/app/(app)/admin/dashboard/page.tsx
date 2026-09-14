@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
+import { Users, CircleCheck, Coffee, UserX, Timer, type LucideIcon } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { Card, CardTitle } from '@/components/ui/card';
 
@@ -29,11 +30,11 @@ export default function AdminDashboardPage() {
       {data && (
         <>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            <Kpi label="Active Users" value={data.totalActiveUsers} href="/admin/users?status=ACTIVE" />
-            <Kpi label="Working" value={data.working} accent="text-green-600" href="/admin/live" />
-            <Kpi label="On Break" value={data.onBreak} accent="text-amber-600" href="/admin/live" />
-            <Kpi label="Not Clocked In" value={data.notClockedIn} accent="text-slate-500" href="/admin/users?status=ACTIVE" />
-            <Kpi label="Active Task Timers" value={data.runningTaskTimers} accent="text-blue-600" href="/admin/live" />
+            <Kpi icon={Users} label="Active Users" value={data.totalActiveUsers} href="/admin/users?status=ACTIVE" />
+            <Kpi icon={CircleCheck} label="Working" value={data.working} accent="text-green-600" href="/admin/live" />
+            <Kpi icon={Coffee} label="On Break" value={data.onBreak} accent="text-amber-600" href="/admin/live" />
+            <Kpi icon={UserX} label="Not Clocked In" value={data.notClockedIn} accent="text-slate-500" href="/admin/users?status=ACTIVE" />
+            <Kpi icon={Timer} label="Active Task Timers" value={data.runningTaskTimers} accent="text-blue-600" href="/admin/live" />
           </div>
           <Card>
             <CardTitle>Tasks by Status</CardTitle>
@@ -63,11 +64,26 @@ export default function AdminDashboardPage() {
 // AC-008-002-04 / AC-008-004-03: every KPI is a real link to the matching
 // filtered detail view - found via AC testing that none of these were
 // clickable at all, just static numbers with nowhere to drill down to.
-function Kpi({ label, value, accent, href }: { label: string; value: number; accent?: string; href: string }) {
+function Kpi({
+  icon: Icon,
+  label,
+  value,
+  accent,
+  href,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: number;
+  accent?: string;
+  href: string;
+}) {
   return (
     <Link href={href}>
       <Card className="transition-shadow hover:shadow-md">
-        <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+        <div className="mb-1 flex items-center gap-1.5">
+          <Icon size={14} strokeWidth={2} className={accent ?? 'text-slate-400'} aria-hidden="true" />
+          <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+        </div>
         <p className={'text-2xl font-semibold ' + (accent ?? 'text-slate-900')}>{value}</p>
       </Card>
     </Link>

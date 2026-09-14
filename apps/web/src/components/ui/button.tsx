@@ -14,8 +14,8 @@ const variantClasses: Record<Variant, string> = {
 
 export const Button = forwardRef<
   HTMLButtonElement,
-  ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; loading?: boolean }
->(({ className, variant = 'primary', loading, children, disabled, ...props }, ref) => (
+  ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; loading?: boolean; icon?: React.ReactNode }
+>(({ className, variant = 'primary', loading, icon, children, disabled, ...props }, ref) => (
   <button
     ref={ref}
     disabled={disabled || loading}
@@ -26,7 +26,14 @@ export const Button = forwardRef<
     )}
     {...props}
   >
-    {loading ? 'Please wait…' : children}
+    {loading ? (
+      'Please wait…'
+    ) : (
+      <>
+        {icon}
+        {children}
+      </>
+    )}
   </button>
 ));
 Button.displayName = 'Button';

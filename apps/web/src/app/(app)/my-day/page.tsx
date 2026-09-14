@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { LogIn, LogOut, Coffee, Play, Pause, Square, ArrowRightLeft } from 'lucide-react';
 import { TaskStatus } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useAttendanceState } from '@/lib/use-attendance-state';
@@ -129,22 +130,32 @@ export default function MyDayPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             {isClockedOut && (
-              <Button onClick={() => run(() => clockIn.mutateAsync())} loading={clockIn.isPending}>
+              <Button icon={<LogIn size={16} aria-hidden="true" />} onClick={() => run(() => clockIn.mutateAsync())} loading={clockIn.isPending}>
                 Clock In
               </Button>
             )}
             {!isClockedOut && (
-              <Button variant="danger" onClick={handleClockOut} loading={clockOut.isPending}>
+              <Button icon={<LogOut size={16} aria-hidden="true" />} variant="danger" onClick={handleClockOut} loading={clockOut.isPending}>
                 Clock Out
               </Button>
             )}
             {isWorking && (
-              <Button variant="secondary" onClick={() => run(() => breakStart.mutateAsync())} loading={breakStart.isPending}>
+              <Button
+                icon={<Coffee size={16} aria-hidden="true" />}
+                variant="secondary"
+                onClick={() => run(() => breakStart.mutateAsync())}
+                loading={breakStart.isPending}
+              >
                 Start Break
               </Button>
             )}
             {isOnBreak && (
-              <Button variant="secondary" onClick={() => run(() => breakEnd.mutateAsync())} loading={breakEnd.isPending}>
+              <Button
+                icon={<Play size={16} aria-hidden="true" />}
+                variant="secondary"
+                onClick={() => run(() => breakEnd.mutateAsync())}
+                loading={breakEnd.isPending}
+              >
                 End Break
               </Button>
             )}
@@ -158,10 +169,20 @@ export default function MyDayPage() {
               <p className="mb-1 text-lg font-medium text-slate-900">{attendance.activeTimer.task.title}</p>
               <p className="mb-4 font-mono text-2xl text-slate-700">{formatDuration(timerSeconds)}</p>
               <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" onClick={() => run(() => timerPause.mutateAsync())} loading={timerPause.isPending}>
+                <Button
+                  icon={<Pause size={16} aria-hidden="true" />}
+                  variant="secondary"
+                  onClick={() => run(() => timerPause.mutateAsync())}
+                  loading={timerPause.isPending}
+                >
                   Pause
                 </Button>
-                <Button variant="danger" onClick={() => run(() => timerStop.mutateAsync())} loading={timerStop.isPending}>
+                <Button
+                  icon={<Square size={16} aria-hidden="true" />}
+                  variant="danger"
+                  onClick={() => run(() => timerStop.mutateAsync())}
+                  loading={timerStop.isPending}
+                >
                   Stop
                 </Button>
               </div>
@@ -224,6 +245,7 @@ export default function MyDayPage() {
                     <>
                       {attendance?.activeTimer ? (
                         <Button
+                          icon={<ArrowRightLeft size={16} aria-hidden="true" />}
                           variant="secondary"
                           onClick={() => run(() => timerSwitch.mutateAsync(task.id))}
                           loading={timerSwitch.isPending}
@@ -231,11 +253,11 @@ export default function MyDayPage() {
                           Switch to this
                         </Button>
                       ) : task.status === TaskStatus.TO_DO ? (
-                        <Button onClick={() => run(() => timerStart.mutateAsync(task.id))} loading={timerStart.isPending}>
+                        <Button icon={<Play size={16} aria-hidden="true" />} onClick={() => run(() => timerStart.mutateAsync(task.id))} loading={timerStart.isPending}>
                           Start
                         </Button>
                       ) : (
-                        <Button onClick={() => run(() => timerResume.mutateAsync(task.id))} loading={timerResume.isPending}>
+                        <Button icon={<Play size={16} aria-hidden="true" />} onClick={() => run(() => timerResume.mutateAsync(task.id))} loading={timerResume.isPending}>
                           Resume
                         </Button>
                       )}
