@@ -22,6 +22,21 @@ interface UserOption {
   status: UserStatus;
 }
 
+const priorityColor: Record<TaskPriority, 'slate' | 'blue' | 'amber' | 'red'> = {
+  [TaskPriority.LOW]: 'slate',
+  [TaskPriority.MEDIUM]: 'blue',
+  [TaskPriority.HIGH]: 'amber',
+  [TaskPriority.CRITICAL]: 'red',
+};
+
+const statusColor: Record<TaskStatus, 'slate' | 'blue' | 'amber' | 'green' | 'red'> = {
+  [TaskStatus.TO_DO]: 'slate',
+  [TaskStatus.IN_PROGRESS]: 'blue',
+  [TaskStatus.PAUSED]: 'amber',
+  [TaskStatus.COMPLETED]: 'green',
+  [TaskStatus.CANCELLED]: 'red',
+};
+
 // AC-008-004-03 / AC-008-002-04: the admin dashboard's KPI tiles link here with
 // ?status=... or ?overdue=1 so a count on the dashboard actually drills down to
 // the matching filtered list, instead of just being a number nobody can click.
@@ -162,32 +177,34 @@ function AdminTasksPageInner() {
         <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tasks table">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
+              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
                 <th className="py-2 pr-4">Title</th>
                 <th className="py-2 pr-4">Assignee</th>
                 <th className="py-2 pr-4">Priority</th>
                 <th className="py-2 pr-4">Status</th>
                 <th className="py-2 pr-4">Due</th>
-                <th className="py-2 pr-4">Actual time</th>
+                <th className="py-2 pr-4 text-right">Actual time</th>
               </tr>
             </thead>
             <tbody>
               {(tasks ?? []).map((t) => (
-                <tr key={t.id} className="border-b border-slate-100">
-                  <td className="py-2 pr-4">
-                    <Link href={`/tasks/${t.id}`} className="text-slate-900 hover:underline">
+                <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-2.5 pr-4">
+                    <Link href={`/tasks/${t.id}`} className="font-medium text-slate-900 hover:text-brand-700 hover:underline">
                       {t.title}
                     </Link>
                   </td>
-                  <td className="py-2 pr-4">
+                  <td className="py-2.5 pr-4 text-slate-600">
                     {t.assignee ? `${t.assignee.firstName} ${t.assignee.surname}` : '—'}
                   </td>
-                  <td className="py-2 pr-4">
-                    <Badge color="blue">{t.priority}</Badge>
+                  <td className="py-2.5 pr-4">
+                    <Badge color={priorityColor[t.priority]}>{t.priority}</Badge>
                   </td>
-                  <td className="py-2 pr-4">{t.status.replace('_', ' ')}</td>
-                  <td className="py-2 pr-4">{t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '—'}</td>
-                  <td className="py-2 pr-4">{formatMinutes(t.actualMinutes)}</td>
+                  <td className="py-2.5 pr-4">
+                    <Badge color={statusColor[t.status]} dot>{t.status.replace('_', ' ')}</Badge>
+                  </td>
+                  <td className="py-2.5 pr-4 text-slate-600">{t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '—'}</td>
+                  <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-slate-900">{formatMinutes(t.actualMinutes)}</td>
                 </tr>
               ))}
             </tbody>

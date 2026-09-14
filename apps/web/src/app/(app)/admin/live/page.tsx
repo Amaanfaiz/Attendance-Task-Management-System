@@ -80,28 +80,32 @@ export default function LiveAttendancePage() {
         <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Live attendance table">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
+              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
                 <th className="py-2 pr-4">Employee</th>
                 <th className="py-2 pr-4">Department</th>
                 <th className="py-2 pr-4">Status</th>
                 <th className="py-2 pr-4">Clocked in since</th>
-                <th className="py-2 pr-4">Duration</th>
+                <th className="py-2 pr-4 text-right">Duration</th>
                 <th className="py-2 pr-4">Current task</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} className="border-b border-slate-100">
-                  <td className="py-2 pr-4">
+                <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-2.5 pr-4 font-medium text-slate-900">
                     {row.user.firstName} {row.user.surname}
                   </td>
-                  <td className="py-2 pr-4">{row.user.department?.name ?? '—'}</td>
-                  <td className="py-2 pr-4">
-                    {row.status === 'ON_BREAK' ? <Badge color="amber">On Break</Badge> : <Badge color="green">Working</Badge>}
+                  <td className="py-2.5 pr-4 text-slate-600">{row.user.department?.name ?? '—'}</td>
+                  <td className="py-2.5 pr-4">
+                    {row.status === 'ON_BREAK' ? (
+                      <Badge color="amber" dot>On Break</Badge>
+                    ) : (
+                      <Badge color="green" dot>Working</Badge>
+                    )}
                   </td>
-                  <td className="py-2 pr-4">{new Date(row.clockInAt).toLocaleTimeString()}</td>
-                  <td className="py-2 pr-4">{durationSince(row.clockInAt)}</td>
-                  <td className="py-2 pr-4">{row.currentTask?.task.title ?? '—'}</td>
+                  <td className="py-2.5 pr-4 text-slate-600">{new Date(row.clockInAt).toLocaleTimeString()}</td>
+                  <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-slate-900">{durationSince(row.clockInAt)}</td>
+                  <td className="py-2.5 pr-4 text-slate-600">{row.currentTask?.task.title ?? '—'}</td>
                 </tr>
               ))}
               {data && rows.length === 0 && (
