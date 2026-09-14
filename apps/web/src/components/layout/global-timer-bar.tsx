@@ -14,7 +14,7 @@ export function GlobalTimerBar() {
   if (!data || data.state === 'CLOCKED_OUT') {
     return (
       <div className="flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600">
-        <Badge color="slate">Clocked out</Badge>
+        <Badge color="slate" dot>Clocked out</Badge>
       </div>
     );
   }
@@ -22,9 +22,9 @@ export function GlobalTimerBar() {
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-md bg-slate-100 px-3 py-1.5 text-sm">
       {data.state === 'ON_BREAK' ? (
-        <Badge color="amber">On break</Badge>
+        <Badge color="amber" dot>On break</Badge>
       ) : (
-        <Badge color="green">Working · {formatDuration(sessionSeconds)}</Badge>
+        <Badge color="green" dot>Working · {formatDuration(sessionSeconds)}</Badge>
       )}
       {data.activeTimer ? (
         <span className="flex items-center gap-1.5 font-medium text-slate-800">

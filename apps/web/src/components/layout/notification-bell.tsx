@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Bell } from 'lucide-react';
 import {
   notificationHref,
   useMarkNotificationRead,
@@ -53,15 +54,7 @@ export function NotificationBell() {
         aria-expanded={open}
         className="relative rounded-md border border-slate-300 p-1.5 text-slate-700 hover:bg-slate-100"
       >
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <path
-            d="M5 8a5 5 0 0 1 10 0c0 3.5 1.2 4.8 1.5 5.2.3.4 0 1-.6 1H4.1c-.6 0-.9-.6-.6-1C3.8 12.8 5 11.5 5 8Z"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-          />
-          <path d="M8 16.5a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
+        <Bell size={18} strokeWidth={1.5} aria-hidden="true" />
         {unreadCount > 0 && (
           <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white">
             {unreadCount > 9 ? '9+' : unreadCount}

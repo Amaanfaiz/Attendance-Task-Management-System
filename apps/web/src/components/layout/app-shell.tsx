@@ -21,6 +21,8 @@ import {
   FileCheck,
   ScrollText,
   Settings,
+  Menu,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { UserRole } from '@atms/shared';
@@ -202,14 +204,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             aria-expanded={mobileMenuOpen}
             className="rounded-md border border-slate-300 p-1.5 text-slate-700 md:hidden"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path
-                d="M3 5h14M3 10h14M3 15h14"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
+            {mobileMenuOpen ? (
+              <X size={20} strokeWidth={1.5} aria-hidden="true" />
+            ) : (
+              <Menu size={20} strokeWidth={1.5} aria-hidden="true" />
+            )}
           </button>
           <div className="min-w-0 flex-1 overflow-x-auto">
             {showPersonalWidgets && <GlobalTimerBar />}
