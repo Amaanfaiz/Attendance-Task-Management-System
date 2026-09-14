@@ -70,6 +70,8 @@ test('Admin: Live Attendance -> approve a correction -> run a report -> audit lo
   await expect(page.getByRole('columnheader', { name: 'employee' })).toBeVisible();
 
   // --- Audit log shows the correction approval we just performed ---
+  // The Audit Log now renders the action as a badge with underscores replaced
+  // by spaces for readability ("CORRECTION APPROVED"), not the raw enum value.
   await page.goto('/admin/audit');
-  await expect(page.getByRole('cell', { name: /CORRECTION_APPROVED/i }).first()).toBeVisible();
+  await expect(page.getByRole('cell', { name: /CORRECTION APPROVED/i }).first()).toBeVisible();
 });
