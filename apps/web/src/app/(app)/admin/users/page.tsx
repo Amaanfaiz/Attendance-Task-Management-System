@@ -13,6 +13,7 @@ import { useDepartments } from '@/lib/use-departments';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
 interface UserRow {
@@ -124,23 +125,23 @@ function UserManagementPageInner() {
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Role">
-                <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" {...register('role')}>
+                <Select {...register('role')}>
                   {Object.values(UserRole).map((r) => (
                     <option key={r} value={r}>
                       {r}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label="Department" error={errors.departmentId?.message}>
-                <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" {...register('departmentId')}>
+                <Select {...register('departmentId')}>
                   <option value="">None</option>
                   {(departments ?? []).map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
             </div>
             <Field label="Employee number" error={errors.employeeNumber?.message}>
@@ -162,9 +163,10 @@ function UserManagementPageInner() {
           <label htmlFor="status-filter" className="text-sm text-slate-600">
             Filter by status:
           </label>
-          <select
+          <Select
             id="status-filter"
-            className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+            uiSize="sm"
+            className="w-auto"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -174,13 +176,13 @@ function UserManagementPageInner() {
                 {s}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
         <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Users table">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
+              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
                 <th className="py-2 pr-4">Name</th>
                 <th className="py-2 pr-4">Email</th>
                 <th className="py-2 pr-4">Role</th>
@@ -191,23 +193,24 @@ function UserManagementPageInner() {
             </thead>
             <tbody>
               {(users ?? []).map((u) => (
-                <tr key={u.id} className="border-b border-slate-100">
-                  <td className="py-2 pr-4">
+                <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-2.5 pr-4">
                     {canEdit ? (
-                      <Link href={`/admin/users/${u.id}`} className="text-slate-900 hover:underline">
+                      <Link href={`/admin/users/${u.id}`} className="font-medium text-slate-900 hover:text-brand-700 hover:underline">
                         {u.firstName} {u.surname}
                       </Link>
                     ) : (
-                      <span className="text-slate-900">
+                      <span className="font-medium text-slate-900">
                         {u.firstName} {u.surname}
                       </span>
                     )}
                   </td>
-                  <td className="py-2 pr-4">{u.email}</td>
-                  <td className="py-2 pr-4">
+                  <td className="py-2.5 pr-4 text-slate-600">{u.email}</td>
+                  <td className="py-2.5 pr-4">
                     {canEdit ? (
-                      <select
-                        className="rounded border border-slate-200 px-1 py-0.5 text-xs"
+                      <Select
+                        uiSize="xs"
+                        className="w-auto"
                         aria-label={`Change role for ${u.firstName} ${u.surname}`}
                         value={u.role}
                         onChange={(e) => setRole.mutate({ id: u.id, role: e.target.value as UserRole })}
@@ -217,16 +220,16 @@ function UserManagementPageInner() {
                             {r}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     ) : (
                       u.role
                     )}
                   </td>
-                  <td className="py-2 pr-4">{u.department?.name ?? '—'}</td>
-                  <td className="py-2 pr-4">
-                    <Badge color={statusColor[u.status]}>{u.status}</Badge>
+                  <td className="py-2.5 pr-4 text-slate-600">{u.department?.name ?? '—'}</td>
+                  <td className="py-2.5 pr-4">
+                    <Badge color={statusColor[u.status]} dot>{u.status}</Badge>
                   </td>
-                  <td className="py-2 pr-4">
+                  <td className="py-2.5 pr-4">
                     {!canEdit ? null : u.status === UserStatus.PENDING ? (
                       <div className="flex gap-2">
                         <Button variant="secondary" onClick={() => approve.mutate(u.id)}>
@@ -237,8 +240,9 @@ function UserManagementPageInner() {
                         </Button>
                       </div>
                     ) : (
-                      <select
-                        className="rounded border border-slate-200 px-1 py-0.5 text-xs"
+                      <Select
+                        uiSize="xs"
+                        className="w-auto"
                         aria-label={`Change status for ${u.firstName} ${u.surname}`}
                         value={u.status}
                         onChange={(e) => setStatus.mutate({ id: u.id, status: e.target.value as UserStatus })}
@@ -248,7 +252,7 @@ function UserManagementPageInner() {
                             {s}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     )}
                   </td>
                 </tr>

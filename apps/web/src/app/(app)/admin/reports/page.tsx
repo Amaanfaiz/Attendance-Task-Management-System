@@ -1,12 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import clsx from 'clsx';
 import { useQuery } from '@tanstack/react-query';
 import { UserStatus } from '@atms/shared';
 import { api, exportUrl } from '@/lib/api-client';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { UnallocatedByEmployeeChart } from '@/components/charts/unallocated-by-employee-chart';
 
 const REPORTS = [
@@ -160,8 +162,7 @@ export default function ReportsPage() {
       <Card>
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Report">
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            <Select
               value={report}
               onChange={(e) => {
                 setReport(e.target.value as typeof report);
@@ -174,7 +175,7 @@ export default function ReportsPage() {
                   {r.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="From">
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -183,18 +184,14 @@ export default function ReportsPage() {
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </Field>
           <Field label="Employee">
-            <select
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-            >
+            <Select value={userId} onChange={(e) => setUserId(e.target.value)}>
               <option value="">All employees</option>
               {(users ?? []).map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.firstName} {u.surname}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Button onClick={() => refetch()}>Run</Button>
           <a href={exportUrl(`/reports/${report}`, { from, to, format: 'csv', ...(userId ? { userId } : {}) })}>
@@ -231,24 +228,24 @@ export default function ReportsPage() {
           <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Attendance summary by employee">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
+                <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
                   <th className="py-2 pr-4">Employee</th>
-                  <th className="py-2 pr-4">Days</th>
-                  <th className="py-2 pr-4">Total net work (min)</th>
-                  <th className="py-2 pr-4">Total break (min)</th>
-                  <th className="py-2 pr-4">Incomplete days</th>
+                  <th className="py-2 pr-4 text-right">Days</th>
+                  <th className="py-2 pr-4 text-right">Total net work (min)</th>
+                  <th className="py-2 pr-4 text-right">Total break (min)</th>
+                  <th className="py-2 pr-4 text-right">Incomplete days</th>
                   <th className="py-2 pr-4"></th>
                 </tr>
               </thead>
               <tbody>
                 {employeeSummary.map((row) => (
-                  <tr key={row.employee} className="border-b border-slate-100">
-                    <td className="py-2 pr-4">{row.employee}</td>
-                    <td className="py-2 pr-4">{row.days}</td>
-                    <td className="py-2 pr-4">{row.netWorkingMinutes}</td>
-                    <td className="py-2 pr-4">{row.breakMinutes}</td>
-                    <td className="py-2 pr-4">{row.incompleteCount || '—'}</td>
-                    <td className="py-2 pr-4">
+                  <tr key={row.employee} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="py-2.5 pr-4 font-medium text-slate-900">{row.employee}</td>
+                    <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-slate-600">{row.days}</td>
+                    <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-slate-900">{row.netWorkingMinutes}</td>
+                    <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-slate-900">{row.breakMinutes}</td>
+                    <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-slate-600">{row.incompleteCount || '—'}</td>
+                    <td className="py-2.5 pr-4">
                       <button
                         className="text-slate-600 underline hover:text-slate-900"
                         onClick={() => setDrilldownEmployee(row.employee)}
@@ -290,20 +287,20 @@ export default function ReportsPage() {
           <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Break daily totals">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
+                <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
                   <th className="py-2 pr-4">Date</th>
-                  <th className="py-2 pr-4">Breaks</th>
-                  <th className="py-2 pr-4">Total minutes</th>
+                  <th className="py-2 pr-4 text-right">Breaks</th>
+                  <th className="py-2 pr-4 text-right">Total minutes</th>
                   <th className="py-2 pr-4">Has active break</th>
                 </tr>
               </thead>
               <tbody>
                 {breakDailyTotals.map((row) => (
-                  <tr key={row.date} className="border-b border-slate-100">
-                    <td className="py-2 pr-4">{row.date}</td>
-                    <td className="py-2 pr-4">{row.count}</td>
-                    <td className="py-2 pr-4">{row.totalMinutes}</td>
-                    <td className="py-2 pr-4">{row.hasActive ? 'Yes' : '—'}</td>
+                  <tr key={row.date} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="py-2.5 pr-4 font-medium text-slate-900">{row.date}</td>
+                    <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-slate-600">{row.count}</td>
+                    <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-slate-900">{row.totalMinutes}</td>
+                    <td className="py-2.5 pr-4 text-slate-600">{row.hasActive ? 'Yes' : '—'}</td>
                   </tr>
                 ))}
                 {breakDailyTotals.length === 0 && (
@@ -343,9 +340,9 @@ export default function ReportsPage() {
           >
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
+                <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
                   {displayedColumns.map((c) => (
-                    <th key={c} className="py-2 pr-4">
+                    <th key={c} className={clsx('py-2 pr-4', typeof displayedRows[0]?.[c] === 'number' && 'text-right')}>
                       {c}
                     </th>
                   ))}
@@ -353,12 +350,21 @@ export default function ReportsPage() {
               </thead>
               <tbody>
                 {displayedRows.map((row, idx) => (
-                  <tr key={idx} className="border-b border-slate-100">
-                    {displayedColumns.map((c) => (
-                      <td key={c} className="py-2 pr-4">
-                        {String(row[c] ?? '')}
-                      </td>
-                    ))}
+                  <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
+                    {displayedColumns.map((c) => {
+                      const isNumeric = typeof row[c] === 'number';
+                      return (
+                        <td
+                          key={c}
+                          className={clsx(
+                            'py-2.5 pr-4',
+                            isNumeric ? 'text-right font-mono tabular-nums text-slate-900' : 'text-slate-700',
+                          )}
+                        >
+                          {String(row[c] ?? '')}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
                 {displayedRows.length === 0 && (

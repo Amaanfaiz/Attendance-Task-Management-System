@@ -9,6 +9,7 @@ import { formatMinutes } from '@/lib/use-reconciliation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Field, Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 interface UserOption {
   id: string;
@@ -80,18 +81,14 @@ export default function AttendanceLogsPage() {
       <Card>
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:max-w-xl">
           <Field label="Employee">
-            <select
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-            >
+            <Select value={userId} onChange={(e) => setUserId(e.target.value)}>
               <option value="">Select an employee…</option>
               {(users ?? []).map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.firstName} {u.surname}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="From">
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -107,32 +104,32 @@ export default function AttendanceLogsPage() {
           <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Attendance logs table">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
+                <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
                   <th className="py-2 pr-4">Date</th>
                   <th className="py-2 pr-4">Clock In</th>
                   <th className="py-2 pr-4">Clock Out</th>
-                  <th className="py-2 pr-4">Breaks</th>
-                  <th className="py-2 pr-4">Net Work</th>
+                  <th className="py-2 pr-4 text-right">Breaks</th>
+                  <th className="py-2 pr-4 text-right">Net Work</th>
                   <th className="py-2 pr-4">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {(sessions ?? []).map((s) => (
-                  <tr key={s.id} className="border-b border-slate-100">
-                    <td className="py-2 pr-4">
-                      <Link href={`/attendance/${s.id}`} className="text-slate-900 hover:underline">
+                  <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="py-2.5 pr-4">
+                      <Link href={`/attendance/${s.id}`} className="font-medium text-slate-900 hover:text-brand-700 hover:underline">
                         {new Date(s.clockInAt).toLocaleDateString()}
                       </Link>
                     </td>
-                    <td className="py-2 pr-4">{new Date(s.clockInAt).toLocaleTimeString()}</td>
-                    <td className="py-2 pr-4">{s.clockOutAt ? new Date(s.clockOutAt).toLocaleTimeString() : '—'}</td>
-                    <td className="py-2 pr-4">{formatMinutes(breakMinutes(s))}</td>
-                    <td className="py-2 pr-4">{formatMinutes(netMinutes(s))}</td>
-                    <td className="py-2 pr-4">
+                    <td className="py-2.5 pr-4 text-slate-600">{new Date(s.clockInAt).toLocaleTimeString()}</td>
+                    <td className="py-2.5 pr-4 text-slate-600">{s.clockOutAt ? new Date(s.clockOutAt).toLocaleTimeString() : '—'}</td>
+                    <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-slate-900">{formatMinutes(breakMinutes(s))}</td>
+                    <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-slate-900">{formatMinutes(netMinutes(s))}</td>
+                    <td className="py-2.5 pr-4">
                       {!s.clockOutAt || s.breaks.some((b) => !b.endAt) ? (
-                        <Badge color="amber">Incomplete</Badge>
+                        <Badge color="amber" dot>Incomplete</Badge>
                       ) : (
-                        <Badge color="green">Complete</Badge>
+                        <Badge color="green" dot>Complete</Badge>
                       )}
                     </td>
                   </tr>

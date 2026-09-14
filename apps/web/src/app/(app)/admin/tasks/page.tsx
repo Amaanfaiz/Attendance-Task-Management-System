@@ -13,6 +13,7 @@ import { formatMinutes } from '@/lib/use-reconciliation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
 interface UserOption {
@@ -103,23 +104,23 @@ function AdminTasksPageInner() {
             </Field>
             <div className="grid grid-cols-3 gap-3">
               <Field label="Priority">
-                <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" {...register('priority')}>
+                <Select {...register('priority')}>
                   {Object.values(TaskPriority).map((p) => (
                     <option key={p} value={p}>
                       {p}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label="Assignee" error={errors.assigneeId?.message}>
-                <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" {...register('assigneeId')}>
+                <Select {...register('assigneeId')}>
                   <option value="">Unassigned</option>
                   {(users ?? []).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.firstName} {u.surname}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label="Estimated minutes" error={errors.estimatedMinutes?.message}>
                 <Input type="number" {...register('estimatedMinutes', { valueAsNumber: true })} />
@@ -140,9 +141,10 @@ function AdminTasksPageInner() {
           <label htmlFor="task-status-filter" className="text-sm text-slate-600">
             Filter by status:
           </label>
-          <select
+          <Select
             id="task-status-filter"
-            className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+            uiSize="sm"
+            className="w-auto"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -152,13 +154,14 @@ function AdminTasksPageInner() {
                 {s.replace('_', ' ')}
               </option>
             ))}
-          </select>
+          </Select>
           <label htmlFor="task-priority-filter" className="text-sm text-slate-600">
             Filter by priority:
           </label>
-          <select
+          <Select
             id="task-priority-filter"
-            className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+            uiSize="sm"
+            className="w-auto"
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
           >
@@ -168,7 +171,7 @@ function AdminTasksPageInner() {
                 {p}
               </option>
             ))}
-          </select>
+          </Select>
           {overdueOnly && (
             <Badge color="red">Overdue only (from dashboard)</Badge>
           )}

@@ -7,6 +7,7 @@ import { api, ApiError } from '@/lib/api-client';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 interface CorrectionRow {
   id: string;
@@ -131,8 +132,7 @@ function DirectCorrectionForm() {
       {success && <p className="mb-3 rounded-md bg-emerald-50 p-2 text-sm text-emerald-700">Correction applied.</p>}
       <div className="space-y-3">
         <Field label="Employee">
-          <select
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          <Select
             value={employeeId}
             onChange={(e) => {
               setEmployeeId(e.target.value);
@@ -145,22 +145,17 @@ function DirectCorrectionForm() {
                 {u.firstName} {u.surname}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label="Record">
-          <select
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            disabled={!employeeId}
-          >
+          <Select value={target} onChange={(e) => setTarget(e.target.value)} disabled={!employeeId}>
             <option value="">Select a record…</option>
             {options.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Proposed start">

@@ -13,6 +13,7 @@ import { formatMinutes } from '@/lib/use-reconciliation';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
 interface UserOption {
@@ -100,8 +101,9 @@ export default function TaskDetailPage() {
         {error && <p className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p>}
         <div className="mb-4">
           <label className="mr-2 text-sm font-medium text-slate-700">Status</label>
-          <select
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+          <Select
+            uiSize="sm"
+            className="w-auto"
             value={task.status}
             onChange={(e) => updateStatus.mutate(e.target.value as TaskStatus)}
           >
@@ -110,7 +112,7 @@ export default function TaskDetailPage() {
                 {s.replace('_', ' ')}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div>
@@ -160,23 +162,23 @@ export default function TaskDetailPage() {
             </Field>
             <div className="grid grid-cols-3 gap-3">
               <Field label="Priority">
-                <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" {...register('priority')}>
+                <Select {...register('priority')}>
                   {Object.values(TaskPriority).map((p) => (
                     <option key={p} value={p}>
                       {p}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label="Assignee" error={errors.assigneeId?.message}>
-                <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" {...register('assigneeId')}>
+                <Select {...register('assigneeId')}>
                   <option value="">Unassigned</option>
                   {(users ?? []).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.firstName} {u.surname}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label="Estimated minutes" error={errors.estimatedMinutes?.message}>
                 <Input type="number" {...register('estimatedMinutes', { valueAsNumber: true })} />

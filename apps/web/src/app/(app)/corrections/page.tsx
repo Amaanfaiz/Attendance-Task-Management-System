@@ -6,6 +6,7 @@ import { api, ApiError } from '@/lib/api-client';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
 interface TaskTimeEntryRow {
@@ -80,18 +81,14 @@ function CorrectionForm({
       {error && <p className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p>}
       <div className="space-y-3">
         <Field label="Record">
-          <select
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-            value={targetId}
-            onChange={(e) => setTargetId(e.target.value)}
-          >
+          <Select value={targetId} onChange={(e) => setTargetId(e.target.value)}>
             <option value="">Select a record…</option>
             {options.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={targetType === 'ATTENDANCE_SESSION' ? 'Proposed clock-in' : 'Proposed start'}>

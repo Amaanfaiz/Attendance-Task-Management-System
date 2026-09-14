@@ -12,6 +12,7 @@ import { formatMinutes } from '@/lib/use-reconciliation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
 const priorityColor: Record<TaskPriority, 'slate' | 'amber' | 'red' | 'blue'> = {
@@ -95,13 +96,13 @@ export default function TasksPage() {
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Priority" error={errors.priority?.message}>
-                <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" {...register('priority')}>
+                <Select {...register('priority')}>
                   {Object.values(TaskPriority).map((p) => (
                     <option key={p} value={p}>
                       {p}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label="Estimated minutes" error={errors.estimatedMinutes?.message}>
                 <Input type="number" {...register('estimatedMinutes', { valueAsNumber: true })} />
@@ -119,35 +120,27 @@ export default function TasksPage() {
 
       <Card>
         <div className="mb-3 flex flex-wrap items-center gap-3">
-          <label className="text-sm text-slate-600">
-            Status:{' '}
-            <select
-              className="rounded-md border border-slate-300 px-2 py-1 text-sm"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
+          <label className="flex items-center gap-1.5 text-sm text-slate-600">
+            Status:
+            <Select uiSize="sm" className="w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">Active (default)</option>
               {Object.values(TaskStatus).map((s) => (
                 <option key={s} value={s}>
                   {s.replace('_', ' ')}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
-          <label className="text-sm text-slate-600">
-            Priority:{' '}
-            <select
-              className="rounded-md border border-slate-300 px-2 py-1 text-sm"
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-            >
+          <label className="flex items-center gap-1.5 text-sm text-slate-600">
+            Priority:
+            <Select uiSize="sm" className="w-auto" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
               <option value="">All</option>
               {Object.values(TaskPriority).map((p) => (
                 <option key={p} value={p}>
                   {p}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         </div>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}

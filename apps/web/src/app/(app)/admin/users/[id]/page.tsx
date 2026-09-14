@@ -11,6 +11,7 @@ import { useDepartments } from '@/lib/use-departments';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
 interface UserDetail {
@@ -118,30 +119,22 @@ export default function UserDetailPage() {
         <CardTitle>Role &amp; status</CardTitle>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <Field label="Role">
-            <select
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={user.role}
-              onChange={(e) => setRole.mutate(e.target.value as UserRole)}
-            >
+            <Select value={user.role} onChange={(e) => setRole.mutate(e.target.value as UserRole)}>
               {Object.values(UserRole).map((r) => (
                 <option key={r} value={r}>
                   {r}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="Status">
-            <select
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              value={user.status}
-              onChange={(e) => setStatus.mutate(e.target.value as UserStatus)}
-            >
+            <Select value={user.status} onChange={(e) => setStatus.mutate(e.target.value as UserStatus)}>
               {Object.values(UserStatus).map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
         <p className="mt-2 text-xs text-slate-500">
@@ -178,14 +171,14 @@ export default function UserDetailPage() {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Department" error={errors.departmentId?.message}>
-              <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" {...register('departmentId')}>
+              <Select {...register('departmentId')}>
                 <option value="">None</option>
                 {(departments ?? []).map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label="Employee number" error={errors.employeeNumber?.message}>
               <Input placeholder="Leave blank if unused" {...register('employeeNumber')} />
