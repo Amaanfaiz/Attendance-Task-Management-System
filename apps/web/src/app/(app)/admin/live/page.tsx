@@ -8,6 +8,7 @@ import { formatMinutes } from '@/lib/use-reconciliation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 function durationSince(clockInAt: string): string {
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(clockInAt).getTime()) / 60000));
@@ -52,14 +53,15 @@ export default function LiveAttendancePage() {
           <label htmlFor="live-search" className="text-sm text-slate-600">
             Search:
           </label>
-          <input
-            id="live-search"
-            type="text"
-            placeholder="Name or email"
-            className="rounded-md border border-slate-300 px-2 py-1 text-sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="w-full sm:w-56">
+            <Input
+              id="live-search"
+              type="text"
+              placeholder="Name or email"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
           <label htmlFor="live-department" className="ml-2 text-sm text-slate-600">
             Department:
           </label>

@@ -46,15 +46,18 @@ function AdminTasksPageInner() {
   const [showCreate, setShowCreate] = useState(false);
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') ?? '');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
   const overdueOnly = searchParams.get('overdue') === '1';
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // AC-005-004-03: the backend already accepted a priority filter here too,
-  // but this page only ever exposed the status one.
+  // but this page only ever exposed the status one. The backend also already
+  // accepted assigneeId (found via API-vs-UI audit) with no control for it either.
   const { data: allTasks, isLoading } = useAllTasks({
     ...(statusFilter ? { status: statusFilter } : {}),
     ...(priorityFilter ? { priority: priorityFilter } : {}),
+    ...(assigneeFilter ? { assigneeId: assigneeFilter } : {}),
   });
   const tasks = overdueOnly
     ? (allTasks ?? []).filter(
@@ -169,6 +172,23 @@ function AdminTasksPageInner() {
             {Object.values(TaskPriority).map((p) => (
               <option key={p} value={p}>
                 {p}
+              </option>
+            ))}
+          </Select>
+          <label htmlFor="task-assignee-filter" className="text-sm text-slate-600">
+            Filter by assignee:
+          </label>
+          <Select
+            id="task-assignee-filter"
+            uiSize="sm"
+            className="w-auto"
+            value={assigneeFilter}
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+          >
+            <option value="">All</option>
+            {(users ?? []).map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.firstName} {u.surname}
               </option>
             ))}
           </Select>

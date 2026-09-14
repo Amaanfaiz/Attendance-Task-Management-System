@@ -5,11 +5,17 @@ import clsx from 'clsx';
 import { useQuery } from '@tanstack/react-query';
 import { UserStatus } from '@atms/shared';
 import { api, exportUrl } from '@/lib/api-client';
+import { useDepartments } from '@/lib/use-departments';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { UnallocatedByEmployeeChart } from '@/components/charts/unallocated-by-employee-chart';
+
+interface TaskOption {
+  id: string;
+  title: string;
+}
 
 const REPORTS = [
   { value: 'attendance', label: 'Daily Attendance' },
@@ -78,22 +84,41 @@ export default function ReportsPage() {
   const [drilldownEmployee, setDrilldownEmployee] = useState<string | null>(null);
   const [hideZeroUnallocated, setHideZeroUnallocated] = useState(false);
   const [userId, setUserId] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+  const [taskId, setTaskId] = useState('');
 
   const { data: users } = useQuery({
     queryKey: ['users', 'admin', 'active-for-reports'],
     queryFn: () => api.get<UserOption[]>('/users', { status: UserStatus.ACTIVE }),
   });
+  const { data: departments } = useDepartments();
+  // GET /reports/task-time already accepted a taskId param with no picker for it -
+  // found via API-vs-UI audit. Only fetched for the task-time report, not on
+  // every page load.
+  const { data: tasksForFilter } = useQuery({
+    queryKey: ['tasks', 'all', 'for-report-filter'],
+    queryFn: () => api.get<TaskOption[]>('/tasks', { scope: 'all' }),
+    enabled: report === 'task-time',
+  });
+
+  // Only the attendance report accepts departmentId, only task-time accepts taskId -
+  // matching the reports controller's per-endpoint query params exactly.
+  const extraParams = {
+    ...(userId ? { userId } : {}),
+    ...(report === 'attendance' && departmentId ? { departmentId } : {}),
+    ...(report === 'task-time' && taskId ? { taskId } : {}),
+  };
 
   // AC-004-006-01: the breaks (and every other) report already supported a
   // userId filter server-side, but this page never exposed a way to pick one.
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['reports', report, from, to, userId],
+    queryKey: ['reports', report, from, to, userId, departmentId, taskId],
     queryFn: () =>
       api.get<{ rows: Record<string, unknown>[] }>(`/reports/${report}`, {
         from,
         to,
         format: 'json',
-        ...(userId ? { userId } : {}),
+        ...extraParams,
       }),
   });
 
@@ -168,6 +193,8 @@ export default function ReportsPage() {
                 setReport(e.target.value as typeof report);
                 setSummaryView(false);
                 setDrilldownEmployee(null);
+                setDepartmentId('');
+                setTaskId('');
               }}
             >
               {REPORTS.map((r) => (
@@ -193,11 +220,35 @@ export default function ReportsPage() {
               ))}
             </Select>
           </Field>
+          {report === 'attendance' && (
+            <Field label="Department">
+              <Select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+                <option value="">All departments</option>
+                {(departments ?? []).map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+          {report === 'task-time' && (
+            <Field label="Task">
+              <Select value={taskId} onChange={(e) => setTaskId(e.target.value)}>
+                <option value="">All tasks</option>
+                {(tasksForFilter ?? []).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
           <Button onClick={() => refetch()}>Run</Button>
-          <a href={exportUrl(`/reports/${report}`, { from, to, format: 'csv', ...(userId ? { userId } : {}) })}>
+          <a href={exportUrl(`/reports/${report}`, { from, to, format: 'csv', ...extraParams })}>
             <Button variant="secondary">Export CSV</Button>
           </a>
-          <a href={exportUrl(`/reports/${report}`, { from, to, format: 'xlsx', ...(userId ? { userId } : {}) })}>
+          <a href={exportUrl(`/reports/${report}`, { from, to, format: 'xlsx', ...extraParams })}>
             <Button variant="secondary">Export XLSX</Button>
           </a>
           {report === 'attendance' && (

@@ -5,9 +5,15 @@ import { useQuery } from '@tanstack/react-query';
 import { AuditAction } from '@atms/shared';
 import { api } from '@/lib/api-client';
 import { Card } from '@/components/ui/card';
-import { Field } from '@/components/ui/input';
+import { Field, Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+
+interface UserOption {
+  id: string;
+  firstName: string;
+  surname: string;
+}
 
 interface AuditRow {
   id: string;
@@ -33,16 +39,35 @@ function actionColor(action: string): 'green' | 'red' | 'amber' | 'blue' | 'slat
 
 export default function AuditLogPage() {
   const [action, setAction] = useState('');
+  const [actorId, setActorId] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+
+  // GET /audit already accepted actorId/from/to (server caps the log at 500 rows
+  // with no way to narrow it), and no control here ever set them - found via
+  // API-vs-UI audit. No status filter: an actor on a historical entry may no
+  // longer be active, and should still be pickable.
+  const { data: actors } = useQuery({
+    queryKey: ['users', 'admin', 'all-for-audit'],
+    queryFn: () => api.get<UserOption[]>('/users'),
+  });
+
   const { data, isLoading } = useQuery({
-    queryKey: ['audit', action],
-    queryFn: () => api.get<AuditRow[]>('/audit', action ? { action } : undefined),
+    queryKey: ['audit', action, actorId, from, to],
+    queryFn: () =>
+      api.get<AuditRow[]>('/audit', {
+        action: action || undefined,
+        actorId: actorId || undefined,
+        from: from || undefined,
+        to: to || undefined,
+      }),
   });
 
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-slate-900">Audit Log</h1>
       <Card>
-        <div className="mb-3">
+        <div className="mb-3 flex flex-wrap items-end gap-3">
           <Field label="Filter by action">
             <Select uiSize="sm" className="w-auto" value={action} onChange={(e) => setAction(e.target.value)}>
               <option value="">All</option>
@@ -52,6 +77,22 @@ export default function AuditLogPage() {
                 </option>
               ))}
             </Select>
+          </Field>
+          <Field label="Actor">
+            <Select uiSize="sm" className="w-auto" value={actorId} onChange={(e) => setActorId(e.target.value)}>
+              <option value="">All</option>
+              {(actors ?? []).map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.firstName} {a.surname}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="From">
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </Field>
+          <Field label="To">
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </Field>
         </div>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}

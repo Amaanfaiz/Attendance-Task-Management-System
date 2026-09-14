@@ -40,8 +40,12 @@ function UserManagementPageInner() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') ?? '');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
   const { data: departments } = useDepartments();
   const { data: currentUser } = useCurrentUser();
   // RISK-015: Auditor can reach this page's data (GET /users is shared with the
@@ -49,10 +53,24 @@ function UserManagementPageInner() {
   // the edit affordances rather than show controls that look usable but aren't.
   const canEdit = currentUser?.role === UserRole.ADMINISTRATOR;
 
+  // AC not previously covered: GET /users already accepted role/departmentId/search,
+  // but this page only ever sent status - found via API-vs-UI audit. Search is
+  // applied client-side over the (already server-filtered-by-status/role/department)
+  // rows, same pattern Live Attendance already uses for its own search box, rather
+  // than refetching on every keystroke.
   const { data: users, isLoading } = useQuery({
-    queryKey: ['users', 'admin', statusFilter],
-    queryFn: () => api.get<UserRow[]>('/users', statusFilter ? { status: statusFilter } : undefined),
+    queryKey: ['users', 'admin', statusFilter, roleFilter, departmentFilter],
+    queryFn: () =>
+      api.get<UserRow[]>('/users', {
+        status: statusFilter || undefined,
+        role: roleFilter || undefined,
+        departmentId: departmentFilter || undefined,
+      }),
   });
+
+  const filteredUsers = (users ?? []).filter((u) =>
+    search ? `${u.firstName} ${u.surname} ${u.email}`.toLowerCase().includes(search.toLowerCase()) : true,
+  );
 
   const {
     register,
@@ -77,7 +95,18 @@ function UserManagementPageInner() {
   });
 
   const approve = useMutation({ mutationFn: (id: string) => api.post(`/users/${id}/approve`), onSuccess: invalidate });
-  const reject = useMutation({ mutationFn: (id: string) => api.post(`/users/${id}/reject`, {}), onSuccess: invalidate });
+  const reject = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      api.post(`/users/${id}/reject`, { reason: reason || undefined }),
+    onSuccess: (_data, { id }) => {
+      invalidate();
+      setRejectReason((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    },
+  });
   const setStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: UserStatus }) => api.patch(`/users/${id}`, { status }),
     onSuccess: invalidate,
@@ -159,9 +188,15 @@ function UserManagementPageInner() {
       )}
 
       <Card>
-        <div className="mb-3 flex items-center gap-2">
-          <label htmlFor="status-filter" className="text-sm text-slate-600">
-            Filter by status:
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <label htmlFor="user-search" className="text-sm text-slate-600">
+            Search:
+          </label>
+          <div className="w-full sm:w-56">
+            <Input id="user-search" placeholder="Name or email" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <label htmlFor="status-filter" className="ml-2 text-sm text-slate-600">
+            Status:
           </label>
           <Select
             id="status-filter"
@@ -174,6 +209,40 @@ function UserManagementPageInner() {
             {Object.values(UserStatus).map((s) => (
               <option key={s} value={s}>
                 {s}
+              </option>
+            ))}
+          </Select>
+          <label htmlFor="role-filter" className="ml-2 text-sm text-slate-600">
+            Role:
+          </label>
+          <Select
+            id="role-filter"
+            uiSize="sm"
+            className="w-auto"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+          >
+            <option value="">All</option>
+            {Object.values(UserRole).map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </Select>
+          <label htmlFor="department-filter" className="ml-2 text-sm text-slate-600">
+            Department:
+          </label>
+          <Select
+            id="department-filter"
+            uiSize="sm"
+            className="w-auto"
+            value={departmentFilter}
+            onChange={(e) => setDepartmentFilter(e.target.value)}
+          >
+            <option value="">All</option>
+            {(departments ?? []).map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
               </option>
             ))}
           </Select>
@@ -192,7 +261,7 @@ function UserManagementPageInner() {
               </tr>
             </thead>
             <tbody>
-              {(users ?? []).map((u) => (
+              {filteredUsers.map((u) => (
                 <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-2.5 pr-4">
                     {canEdit ? (
@@ -231,11 +300,23 @@ function UserManagementPageInner() {
                   </td>
                   <td className="py-2.5 pr-4">
                     {!canEdit ? null : u.status === UserStatus.PENDING ? (
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button variant="secondary" onClick={() => approve.mutate(u.id)}>
                           Approve
                         </Button>
-                        <Button variant="danger" onClick={() => reject.mutate(u.id)}>
+                        <div className="w-36">
+                          <Input
+                            placeholder="Reason (optional)"
+                            aria-label={`Rejection reason for ${u.firstName} ${u.surname}`}
+                            value={rejectReason[u.id] ?? ''}
+                            onChange={(e) => setRejectReason((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                          />
+                        </div>
+                        <Button
+                          variant="danger"
+                          loading={reject.isPending}
+                          onClick={() => reject.mutate({ id: u.id, reason: rejectReason[u.id] })}
+                        >
                           Reject
                         </Button>
                       </div>
@@ -257,6 +338,13 @@ function UserManagementPageInner() {
                   </td>
                 </tr>
               ))}
+              {users && filteredUsers.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-4 text-center text-slate-500">
+                    {users.length === 0 ? 'No users match these filters.' : 'No one matches this search.'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

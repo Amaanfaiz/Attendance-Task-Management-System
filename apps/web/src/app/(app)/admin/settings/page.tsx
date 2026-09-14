@@ -6,9 +6,62 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { UpdateAppSettingsInput, updateAppSettingsSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
+import { useCreateDepartment, useDepartments } from '@/lib/use-departments';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+
+// No admin screen ever exposed POST /departments (audited live: departments could
+// only ever be picked from a dropdown on Users/Live, never created), so every
+// department those dropdowns list had to be seeded directly in the database.
+function DepartmentsCard() {
+  const { data: departments, isLoading } = useDepartments();
+  const createDepartment = useCreateDepartment();
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = () => {
+    setError(null);
+    createDepartment.mutate(name.trim(), {
+      onSuccess: () => setName(''),
+      onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not create department'),
+    });
+  };
+
+  return (
+    <Card>
+      <CardTitle>Departments</CardTitle>
+      {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+      {departments && departments.length > 0 && (
+        <ul className="mb-3 flex flex-wrap gap-2">
+          {departments.map((d) => (
+            <li key={d.id} className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">
+              {d.name}
+            </li>
+          ))}
+        </ul>
+      )}
+      {departments && departments.length === 0 && (
+        <p className="mb-3 text-sm text-slate-500">No departments yet.</p>
+      )}
+      {error && <p className="mb-2 rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+      <div className="flex items-end gap-2">
+        <Field label="New department name">
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering" />
+        </Field>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={name.trim().length === 0}
+          loading={createDepartment.isPending}
+          onClick={submit}
+        >
+          Add
+        </Button>
+      </div>
+    </Card>
+  );
+}
 
 // EP-011: thresholds/cooldowns the reminder-scanning job reads (AC-011-002-01,
 // AC-011-003-01, AC-011-003-04, AC-011-004-01), plus the email-channel toggle
@@ -49,6 +102,8 @@ export default function AdminSettingsPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-xl font-semibold text-slate-900">Settings</h1>
+
+      <DepartmentsCard />
 
       <form
         onSubmit={handleSubmit((v) => {
