@@ -22,10 +22,9 @@ function durationMinutes(entry: TaskTimeEntryRow): number {
   return Math.max(0, (end - new Date(entry.startAt).getTime()) / 60000);
 }
 
-// SCR-009 My Task Time History - named in the SRS but never built. The
-// existing "daily-log" endpoint only ever covered today (used by My Day);
-// this is the across-dates equivalent of My Attendance History (SCR-005),
-// backed by the new GET /task-timers/history endpoint.
+// SCR-009 My Task Time History - named in the SRS but never built. This is
+// the across-dates equivalent of My Attendance History (SCR-005), backed by
+// the new GET /task-timers/history endpoint.
 export default function TaskTimeHistoryPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -60,22 +59,22 @@ export default function TaskTimeHistoryPage() {
                 <th className="py-2 pr-4">Task</th>
                 <th className="py-2 pr-4">Start</th>
                 <th className="py-2 pr-4">End</th>
-                <th className="py-2 pr-4">Duration</th>
+                <th className="py-2 pr-4 text-right">Duration</th>
                 <th className="py-2 pr-4">Status</th>
               </tr>
             </thead>
             <tbody>
               {(entries ?? []).map((e) => (
-                <tr key={e.id} className="border-b border-slate-100">
-                  <td className="py-2 pr-4">{new Date(e.startAt).toLocaleDateString()}</td>
+                <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-2 pr-4 text-slate-600">{new Date(e.startAt).toLocaleDateString()}</td>
                   <td className="py-2 pr-4">
-                    <Link href={`/tasks/${e.task.id}`} className="text-slate-900 hover:underline">
+                    <Link href={`/tasks/${e.task.id}`} className="font-medium text-slate-900 hover:text-brand-700 hover:underline">
                       {e.task.title}
                     </Link>
                   </td>
-                  <td className="py-2 pr-4">{new Date(e.startAt).toLocaleTimeString()}</td>
-                  <td className="py-2 pr-4">{e.endAt ? new Date(e.endAt).toLocaleTimeString() : '—'}</td>
-                  <td className="py-2 pr-4">{formatMinutes(durationMinutes(e))}</td>
+                  <td className="py-2 pr-4 text-slate-600">{new Date(e.startAt).toLocaleTimeString()}</td>
+                  <td className="py-2 pr-4 text-slate-600">{e.endAt ? new Date(e.endAt).toLocaleTimeString() : '—'}</td>
+                  <td className="py-2 pr-4 text-right font-mono tabular-nums text-slate-900">{formatMinutes(durationMinutes(e))}</td>
                   <td className="py-2 pr-4">
                     {e.status === 'RUNNING' ? <Badge color="green">Running</Badge> : <Badge color="slate">Closed</Badge>}
                   </td>

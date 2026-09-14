@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Get,
   HttpCode,
   Post,
   Req,
@@ -23,10 +22,6 @@ import {
   ResetPasswordInput,
 } from '@atms/shared';
 import { Public } from '../../common/decorators/public.decorator';
-import {
-  CurrentUser,
-  AuthenticatedUser,
-} from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AuthService } from './auth.service';
 import {
@@ -119,10 +114,5 @@ export class AuthController {
   @UsePipes(new ZodValidationPipe(resetPasswordSchema))
   resetPassword(@Body() body: ResetPasswordInput) {
     return this.authService.resetPassword(body);
-  }
-
-  @Get('me')
-  me(@CurrentUser() user: AuthenticatedUser) {
-    return user;
   }
 }

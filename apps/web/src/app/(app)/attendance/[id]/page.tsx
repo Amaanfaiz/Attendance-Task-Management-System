@@ -91,16 +91,16 @@ export default function AttendanceDayDetailPage() {
               <tr className="border-b border-slate-200 text-xs uppercase text-slate-500">
                 <th className="py-2 pr-4">Start</th>
                 <th className="py-2 pr-4">End</th>
-                <th className="py-2 pr-4">Duration</th>
+                <th className="py-2 pr-4 text-right">Duration</th>
                 <th className="py-2 pr-4">Status</th>
               </tr>
             </thead>
             <tbody>
               {session.breaks.map((b) => (
-                <tr key={b.id} className="border-b border-slate-100">
-                  <td className="py-2 pr-4">{new Date(b.startAt).toLocaleTimeString()}</td>
-                  <td className="py-2 pr-4">{b.endAt ? new Date(b.endAt).toLocaleTimeString() : '—'}</td>
-                  <td className="py-2 pr-4">{formatMinutes(durationMinutes(b.startAt, b.endAt))}</td>
+                <tr key={b.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-2 pr-4 text-slate-600">{new Date(b.startAt).toLocaleTimeString()}</td>
+                  <td className="py-2 pr-4 text-slate-600">{b.endAt ? new Date(b.endAt).toLocaleTimeString() : '—'}</td>
+                  <td className="py-2 pr-4 text-right font-mono tabular-nums text-slate-900">{formatMinutes(durationMinutes(b.startAt, b.endAt))}</td>
                   <td className="py-2 pr-4">
                     {b.endAt ? <Badge color="green">Completed</Badge> : <Badge color="amber">Active (incomplete)</Badge>}
                   </td>
@@ -121,16 +121,16 @@ export default function AttendanceDayDetailPage() {
                 <th className="py-2 pr-4">Task</th>
                 <th className="py-2 pr-4">Start</th>
                 <th className="py-2 pr-4">End</th>
-                <th className="py-2 pr-4">Duration</th>
+                <th className="py-2 pr-4 text-right">Duration</th>
               </tr>
             </thead>
             <tbody>
               {session.taskTimeEntries.map((t) => (
-                <tr key={t.id} className="border-b border-slate-100">
-                  <td className="py-2 pr-4">{t.task.title}</td>
-                  <td className="py-2 pr-4">{new Date(t.startAt).toLocaleTimeString()}</td>
-                  <td className="py-2 pr-4">{t.endAt ? new Date(t.endAt).toLocaleTimeString() : '—'}</td>
-                  <td className="py-2 pr-4">{formatMinutes(durationMinutes(t.startAt, t.endAt))}</td>
+                <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-2 pr-4 font-medium text-slate-900">{t.task.title}</td>
+                  <td className="py-2 pr-4 text-slate-600">{new Date(t.startAt).toLocaleTimeString()}</td>
+                  <td className="py-2 pr-4 text-slate-600">{t.endAt ? new Date(t.endAt).toLocaleTimeString() : '—'}</td>
+                  <td className="py-2 pr-4 text-right font-mono tabular-nums text-slate-900">{formatMinutes(durationMinutes(t.startAt, t.endAt))}</td>
                 </tr>
               ))}
             </tbody>

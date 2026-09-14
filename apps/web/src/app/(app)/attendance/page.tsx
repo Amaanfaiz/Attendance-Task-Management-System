@@ -68,23 +68,23 @@ export default function AttendanceHistoryPage() {
                 <th className="py-2 pr-4">Date</th>
                 <th className="py-2 pr-4">Clock In</th>
                 <th className="py-2 pr-4">Clock Out</th>
-                <th className="py-2 pr-4">Breaks</th>
-                <th className="py-2 pr-4">Net Work</th>
+                <th className="py-2 pr-4 text-right">Breaks</th>
+                <th className="py-2 pr-4 text-right">Net Work</th>
                 <th className="py-2 pr-4">Status</th>
               </tr>
             </thead>
             <tbody>
               {(sessions ?? []).map((s) => (
-                <tr key={s.id} className="border-b border-slate-100">
+                <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-2 pr-4">
                     <Link href={`/attendance/${s.id}`} className="text-slate-900 hover:underline">
                       {new Date(s.clockInAt).toLocaleDateString()}
                     </Link>
                   </td>
-                  <td className="py-2 pr-4">{new Date(s.clockInAt).toLocaleTimeString()}</td>
-                  <td className="py-2 pr-4">{s.clockOutAt ? new Date(s.clockOutAt).toLocaleTimeString() : '—'}</td>
-                  <td className="py-2 pr-4">{formatMinutes(breakMinutes(s))}</td>
-                  <td className="py-2 pr-4">{formatMinutes(netMinutes(s))}</td>
+                  <td className="py-2 pr-4 text-slate-600">{new Date(s.clockInAt).toLocaleTimeString()}</td>
+                  <td className="py-2 pr-4 text-slate-600">{s.clockOutAt ? new Date(s.clockOutAt).toLocaleTimeString() : '—'}</td>
+                  <td className="py-2 pr-4 text-right font-mono tabular-nums text-slate-900">{formatMinutes(breakMinutes(s))}</td>
+                  <td className="py-2 pr-4 text-right font-mono tabular-nums text-slate-900">{formatMinutes(netMinutes(s))}</td>
                   <td className="py-2 pr-4">
                     {!s.clockOutAt || s.breaks.some((b) => !b.endAt) ? (
                       <Badge color="amber">Incomplete</Badge>

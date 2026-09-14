@@ -53,14 +53,6 @@ export class TaskTimerController {
     return this.taskTimerService.switchTask(userId, body.taskId);
   }
 
-  @Get('daily-log')
-  dailyLog(@CurrentUser('id') userId: string, @Query('date') date?: string) {
-    return this.taskTimerService.getDailyLog(
-      userId,
-      date ?? new Date().toISOString(),
-    );
-  }
-
   @Get('history')
   history(
     @CurrentUser('id') userId: string,

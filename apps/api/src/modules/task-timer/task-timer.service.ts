@@ -206,19 +206,10 @@ export class TaskTimerService {
     return newEntry;
   }
 
-  // AC-006-009-01..04: daily interval log, chronological, excluding paused (closed-out) gaps.
-  async getDailyLog(userId: string, date: string) {
-    const { start, end } = getUtcDayRange(date);
-
-    return this.prisma.taskTimeEntry.findMany({
-      where: { userId, startAt: { gte: start, lt: end } },
-      include: { task: { select: { id: true, title: true } } },
-      orderBy: { startAt: 'asc' },
-    });
-  }
-
-  // SCR-009 My Task Time History - daily-log above is scoped to one day (used
-  // by My Day's "today" view); this is the across-dates equivalent of
+  // AC-006-009-01..04: daily interval log, chronological, excluding paused gaps -
+  // satisfied via /reconciliation/me's timeline (which already includes TASK
+  // events), not by this method.
+  // SCR-009 My Task Time History - the across-dates equivalent of
   // AttendanceService.getMyHistory, same from/to inclusive-day handling.
   async getHistory(userId: string, from?: string, to?: string) {
     return this.prisma.taskTimeEntry.findMany({
