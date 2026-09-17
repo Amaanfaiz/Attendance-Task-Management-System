@@ -84,7 +84,11 @@ test('Register -> Login -> Clock In -> Task -> Break -> Switch -> Clock Out -> R
   await expect(task1Row.getByText('Active')).not.toBeVisible();
 
   // --- Stop the timer ---
-  await page.getByRole('button', { name: 'Stop' }).click();
+  // Scoped to <main> (not bare `page`) - the header's global timer bar also
+  // renders a "Stop" control (icon-only, aria-label "Stop task timer") once a
+  // timer is active, and <main>/<header> are sibling landmarks so this stays
+  // unambiguous regardless of what the header shows.
+  await main.getByRole('button', { name: 'Stop' }).click();
   await expect(page.getByText('No task timer running. Start one below.')).toBeVisible();
 
   // --- Clock Out ---
