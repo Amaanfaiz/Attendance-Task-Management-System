@@ -61,21 +61,29 @@ function LoginForm() {
           <Input type="email" autoComplete="email" className="pl-9" {...register('email')} />
         </div>
       </Field>
-      <label className="block">
-        <span className="mb-1 flex items-center justify-between">
-          <span className="text-sm font-medium text-slate-700">Password</span>
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <label htmlFor="login-password" className="text-sm font-medium text-slate-700">
+            Password
+          </label>
           <Link href="/forgot-password" className="text-sm text-brand-700 hover:underline">
             Forgot password?
           </Link>
-        </span>
+        </div>
         <div className="relative">
           <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           <Input
+            id="login-password"
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             className="pl-9 pr-9"
             {...register('password')}
           />
+          {/* Sibling, not nested inside the label, so it doesn't pick up the
+              "Password" accessible name too - Playwright's getByLabel('Password')
+              hit a strict-mode violation (2 elements) when this button was a
+              descendant of the <label>, since native HTML associates a wrapping
+              label with every form control inside it, not just the input. */}
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
@@ -86,7 +94,7 @@ function LoginForm() {
           </button>
         </div>
         {errors.password?.message && <span className="mt-1 block text-xs text-red-600">{errors.password.message}</span>}
-      </label>
+      </div>
       <Button
         icon={<ArrowRight size={16} aria-hidden="true" />}
         type="submit"
