@@ -207,28 +207,28 @@ export default function MyDayPage() {
               unallocatedMinutes={summary.unallocatedMinutes}
             />
           )}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-            <Stat label="Worked" value={summary ? formatMinutes(summary.netWorkingMinutes) : '—'} />
-            <Stat label="Task time" value={summary ? formatMinutes(summary.taskMinutes) : '—'} />
-            <Stat label="Break time" value={summary ? formatMinutes(summary.breakMinutes) : '—'} />
-            <div>
+          <div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+              <Stat label="Worked" value={summary ? formatMinutes(summary.netWorkingMinutes) : '—'} />
+              <Stat label="Task time" value={summary ? formatMinutes(summary.taskMinutes) : '—'} />
+              <Stat label="Break time" value={summary ? formatMinutes(summary.breakMinutes) : '—'} />
               <Stat
                 label="Unallocated"
                 value={summary ? formatMinutes(summary.unallocatedMinutes) : '—'}
                 warn={summary?.hasDataQualityException}
               />
-              {summary && summary.unallocatedMinutes > 0 && (
-                <div className="mt-1 flex gap-2 text-xs">
-                  <a href="#todays-timeline" className="text-brand-700 hover:underline">
-                    Review timeline
-                  </a>
-                  <Link href="/corrections" className="text-brand-700 hover:underline">
-                    Request correction
-                  </Link>
-                </div>
-              )}
+              <Stat label="Sessions" value={summary ? String(summary.sessionCount) : '—'} />
             </div>
-            <Stat label="Sessions" value={summary ? String(summary.sessionCount) : '—'} />
+            {summary && summary.unallocatedMinutes > 0 && (
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                <a href="#todays-timeline" className="text-brand-700 hover:underline">
+                  Review timeline
+                </a>
+                <Link href="/corrections" className="text-brand-700 hover:underline">
+                  Request correction
+                </Link>
+              </div>
+            )}
           </div>
         </div>
         {summary?.hasDataQualityException && (
