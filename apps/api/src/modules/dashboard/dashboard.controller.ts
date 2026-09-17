@@ -6,9 +6,13 @@ import {
   TaskTimeEntryStatus,
   UserRole,
   UserStatus,
+  getUtcDayRange,
+  reconcile,
 } from '@atms/shared';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
+
+const UNALLOCATED_DRIFT_THRESHOLD_MINUTES = 45;
 
 // AC-008-002-01..04: workforce KPIs; AC-008-004-01..04: task status summary with overdue count.
 @ApiTags('dashboard')
@@ -19,6 +23,10 @@ export class DashboardController {
 
   @Get('kpis')
   async kpis() {
+    const todayStart = getUtcDayRange(
+      new Date().toISOString().slice(0, 10),
+    ).start;
+
     const [
       totalActiveUsers,
       working,
@@ -26,6 +34,8 @@ export class DashboardController {
       runningTimers,
       tasksByStatusRaw,
       overdueCount,
+      missedClockOutCount,
+      openSessions,
     ] = await Promise.all([
       this.prisma.user.count({ where: { status: UserStatus.ACTIVE } }),
       this.prisma.attendanceSession.count({
@@ -44,12 +54,49 @@ export class DashboardController {
           status: { notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED] },
         },
       }),
+      // AC-008-002 (Attention Required): a session still open from a prior day
+      // means the employee never clocked out - surfaced separately from overdue
+      // tasks since it's an attendance data-quality issue, not a task one.
+      this.prisma.attendanceSession.count({
+        where: {
+          status: {
+            in: [
+              AttendanceSessionStatus.ACTIVE,
+              AttendanceSessionStatus.ON_BREAK,
+            ],
+          },
+          clockInAt: { lt: todayStart },
+        },
+      }),
+      this.prisma.attendanceSession.findMany({
+        where: {
+          status: {
+            in: [
+              AttendanceSessionStatus.ACTIVE,
+              AttendanceSessionStatus.ON_BREAK,
+            ],
+          },
+        },
+        include: { breaks: true, taskTimeEntries: true },
+      }),
     ]);
 
     const notClockedIn = Math.max(0, totalActiveUsers - working - onBreak);
     const tasksByStatus = Object.fromEntries(
       tasksByStatusRaw.map((r) => [r.status, r._count._all]),
     );
+
+    // Same reconciliation math as Reports/My Day - just applied across every
+    // currently open session to flag ones already drifting today, rather than
+    // waiting for a report to be run after the fact.
+    const highDriftCount = openSessions.filter((s) => {
+      const result = reconcile(
+        { start: s.clockInAt, end: s.clockOutAt },
+        s.breaks.map((b) => ({ start: b.startAt, end: b.endAt })),
+        s.taskTimeEntries.map((t) => ({ start: t.startAt, end: t.endAt })),
+      );
+      return result.unallocatedMinutes > UNALLOCATED_DRIFT_THRESHOLD_MINUTES;
+    }).length;
 
     return {
       totalActiveUsers,
@@ -59,6 +106,8 @@ export class DashboardController {
       runningTaskTimers: runningTimers,
       tasksByStatus,
       overdueTaskCount: overdueCount,
+      missedClockOutCount,
+      highDriftCount,
     };
   }
 }

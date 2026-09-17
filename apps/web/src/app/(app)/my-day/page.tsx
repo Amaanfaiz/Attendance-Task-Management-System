@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LogIn, LogOut, Coffee, Play, Pause, Square, ArrowRightLeft } from 'lucide-react';
 import { TaskStatus } from '@atms/shared';
@@ -12,6 +13,7 @@ import { useElapsedSeconds, formatDuration } from '@/lib/use-elapsed';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
 import { DayBreakdownChart } from '@/components/charts/day-breakdown-chart';
 
 function invalidateAll(queryClient: ReturnType<typeof useQueryClient>) {
@@ -209,11 +211,23 @@ export default function MyDayPage() {
             <Stat label="Worked" value={summary ? formatMinutes(summary.netWorkingMinutes) : '—'} />
             <Stat label="Task time" value={summary ? formatMinutes(summary.taskMinutes) : '—'} />
             <Stat label="Break time" value={summary ? formatMinutes(summary.breakMinutes) : '—'} />
-            <Stat
-              label="Unallocated"
-              value={summary ? formatMinutes(summary.unallocatedMinutes) : '—'}
-              warn={summary?.hasDataQualityException}
-            />
+            <div>
+              <Stat
+                label="Unallocated"
+                value={summary ? formatMinutes(summary.unallocatedMinutes) : '—'}
+                warn={summary?.hasDataQualityException}
+              />
+              {summary && summary.unallocatedMinutes > 0 && (
+                <div className="mt-1 flex gap-2 text-xs">
+                  <a href="#todays-timeline" className="text-brand-700 hover:underline">
+                    Review timeline
+                  </a>
+                  <Link href="/corrections" className="text-brand-700 hover:underline">
+                    Request correction
+                  </Link>
+                </div>
+              )}
+            </div>
             <Stat label="Sessions" value={summary ? String(summary.sessionCount) : '—'} />
           </div>
         </div>
@@ -270,44 +284,80 @@ export default function MyDayPage() {
         </ul>
       </Card>
 
-      <Card>
-        <CardTitle>Today&apos;s Timeline</CardTitle>
-        {!summary || summary.timeline.length === 0 ? (
-          <p className="text-sm text-slate-500">No activity recorded yet today.</p>
-        ) : (
-          <ul className="space-y-2">
-            {[...summary.timeline, ...computeTimelineGaps(summary.timeline)]
-              .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-              .map((event, idx) => (
-                <li key={idx} className="flex items-center gap-3 text-sm">
-                  <span
-                    className={
-                      'h-2 w-2 rounded-full ' +
-                      (event.type === 'ATTENDANCE'
-                        ? 'bg-green-500'
-                        : event.type === 'BREAK'
-                          ? 'bg-amber-500'
-                          : event.type === 'UNALLOCATED'
-                            ? 'border border-dashed border-slate-400 bg-transparent'
-                            : 'bg-blue-500')
-                    }
-                  />
-                  <span className="w-16 shrink-0 text-slate-500">
-                    {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  <span className={event.type === 'UNALLOCATED' ? 'font-medium italic text-slate-500' : 'font-medium text-slate-800'}>
-                    {event.label}
-                  </span>
-                  <span className="text-slate-500">
-                    {event.end
-                      ? `→ ${new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                      : '(ongoing)'}
-                  </span>
-                </li>
-              ))}
-          </ul>
-        )}
-      </Card>
+      <div id="todays-timeline">
+        <Card>
+          <CardTitle>Today&apos;s Timeline</CardTitle>
+          {!summary || summary.timeline.length === 0 ? (
+            <p className="text-sm text-slate-500">No activity recorded yet today.</p>
+          ) : (
+            <ul className="space-y-2">
+              {[...summary.timeline, ...computeTimelineGaps(summary.timeline)]
+                .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+                .map((event, idx) => {
+                  // Only the ongoing gap (open-ended, still accumulating) can be
+                  // filled by starting a timer now - a closed past gap would need
+                  // a backdated correction, which isn't something a timer start
+                  // can do, so the shortcut only applies here.
+                  const canAssign =
+                    event.type === 'UNALLOCATED' && !event.end && isWorking && !attendance?.activeTimer;
+                  return (
+                    <li key={idx} className="flex flex-wrap items-center gap-3 text-sm">
+                      <span
+                        className={
+                          'h-2 w-2 rounded-full ' +
+                          (event.type === 'ATTENDANCE'
+                            ? 'bg-green-500'
+                            : event.type === 'BREAK'
+                              ? 'bg-amber-500'
+                              : event.type === 'UNALLOCATED'
+                                ? 'border border-dashed border-slate-400 bg-transparent'
+                                : 'bg-blue-500')
+                        }
+                      />
+                      <span className="w-16 shrink-0 text-slate-500">
+                        {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <span className={event.type === 'UNALLOCATED' ? 'font-medium italic text-slate-500' : 'font-medium text-slate-800'}>
+                        {event.label}
+                      </span>
+                      <span className="text-slate-500">
+                        {event.end
+                          ? `→ ${new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                          : '(ongoing)'}
+                      </span>
+                      {canAssign && eligibleTasks.length > 0 && (
+                        <Select
+                          uiSize="xs"
+                          value=""
+                          aria-label="Assign this time to a task"
+                          onChange={(e) => {
+                            const taskId = e.target.value;
+                            const task = eligibleTasks.find((t) => t.id === taskId);
+                            if (!task) return;
+                            run(() =>
+                              task.status === TaskStatus.TO_DO
+                                ? timerStart.mutateAsync(task.id)
+                                : timerResume.mutateAsync(task.id),
+                            );
+                          }}
+                        >
+                          <option value="" disabled>
+                            Assign to task…
+                          </option>
+                          {eligibleTasks.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.title}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
+                    </li>
+                  );
+                })}
+            </ul>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Users, CircleCheck, Coffee, UserX, Timer, type LucideIcon } from 'lucide-react';
+import { Users, CircleCheck, Coffee, UserX, Timer, AlertTriangle, CircleCheckBig, type LucideIcon } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { Card, CardTitle } from '@/components/ui/card';
 
@@ -14,6 +14,8 @@ interface Kpis {
   runningTaskTimers: number;
   tasksByStatus: Record<string, number>;
   overdueTaskCount: number;
+  missedClockOutCount: number;
+  highDriftCount: number;
 }
 
 export default function AdminDashboardPage() {
@@ -37,6 +39,39 @@ export default function AdminDashboardPage() {
             <Kpi icon={Timer} label="Active Task Timers" value={data.runningTaskTimers} accent="text-blue-600" href="/admin/live" />
           </div>
           <Card>
+            <CardTitle>Attention Required</CardTitle>
+            {data.missedClockOutCount === 0 && data.highDriftCount === 0 && data.overdueTaskCount === 0 ? (
+              <p className="flex items-center gap-2 text-sm text-slate-500">
+                <CircleCheckBig size={16} className="text-green-600" aria-hidden="true" />
+                No operational exceptions right now.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {data.missedClockOutCount > 0 && (
+                  <AttentionItem
+                    href="/admin/live"
+                    label={`${data.missedClockOutCount} missed clock-out${data.missedClockOutCount === 1 ? '' : 's'}`}
+                    detail="Session still open from a previous day"
+                  />
+                )}
+                {data.highDriftCount > 0 && (
+                  <AttentionItem
+                    href="/admin/live"
+                    label={`${data.highDriftCount} session${data.highDriftCount === 1 ? '' : 's'} with high unallocated drift`}
+                    detail="Over 45m of working time without an active task timer today"
+                  />
+                )}
+                {data.overdueTaskCount > 0 && (
+                  <AttentionItem
+                    href="/admin/tasks?overdue=1"
+                    label={`${data.overdueTaskCount} overdue task${data.overdueTaskCount === 1 ? '' : 's'}`}
+                    detail="Past due date and not completed or cancelled"
+                  />
+                )}
+              </ul>
+            )}
+          </Card>
+          <Card>
             <CardTitle>Tasks by Status</CardTitle>
             <div className="flex flex-wrap gap-4">
               {Object.entries(data.tasksByStatus).map(([status, count]) => (
@@ -58,6 +93,20 @@ export default function AdminDashboardPage() {
         </>
       )}
     </div>
+  );
+}
+
+function AttentionItem({ href, label, detail }: { href: string; label: string; detail: string }) {
+  return (
+    <li>
+      <Link href={href} className="flex items-start gap-2 rounded-md p-2 hover:bg-amber-50">
+        <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-600" aria-hidden="true" />
+        <span>
+          <span className="block text-sm font-medium text-slate-900">{label}</span>
+          <span className="block text-xs text-slate-500">{detail}</span>
+        </span>
+      </Link>
+    </li>
   );
 }
 
