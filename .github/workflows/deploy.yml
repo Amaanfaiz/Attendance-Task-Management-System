@@ -34,7 +34,7 @@ jobs:
       - id: tag
         run: echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
-      - uses: azure/login@v2
+      - uses: azure/login@v3
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     steps:
-      - uses: azure/login@v2
+      - uses: azure/login@v3
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
