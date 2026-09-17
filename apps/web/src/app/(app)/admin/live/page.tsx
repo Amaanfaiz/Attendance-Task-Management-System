@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { UserRole } from '@atms/shared';
 import { api } from '@/lib/api-client';
+import { useCurrentUser } from '@/lib/use-current-user';
 import { useDepartments } from '@/lib/use-departments';
-import { formatMinutes } from '@/lib/use-reconciliation';
+import { buildSessionTimeline, formatMinutes } from '@/lib/use-reconciliation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Drawer } from '@/components/ui/drawer';
 
 function durationSince(clockInAt: string): string {
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(clockInAt).getTime()) / 60000));
@@ -23,6 +26,101 @@ interface LiveRow {
   currentTask: { task: { title: string } } | null;
 }
 
+interface SessionDetail {
+  id: string;
+  clockInAt: string;
+  clockOutAt: string | null;
+  breaks: { id: string; startAt: string; endAt: string | null }[];
+  taskTimeEntries: { id: string; startAt: string; endAt: string | null; task: { id: string; title: string } }[];
+}
+
+// GET /attendance/:id has no @AuditorAllowed() (RolesGuard leaves it open to
+// any authenticated user, but AuditorScopeGuard default-denies AUDITOR on
+// every route not explicitly marked) - the detail drawer is scoped to
+// Administrator to match, rather than adding a permission grant this pass
+// didn't ask for.
+function LiveAttendanceDrawer({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
+  const { data: session } = useQuery({
+    queryKey: ['attendance', 'session', sessionId],
+    queryFn: () => api.get<SessionDetail>(`/attendance/${sessionId}`),
+  });
+
+  const built = session ? buildSessionTimeline(session) : null;
+
+  return (
+    <Drawer open onClose={onClose} title="Attendance detail" subtitle={session ? new Date(session.clockInAt).toLocaleDateString() : undefined}>
+      {!session ? (
+        <p className="text-sm text-slate-500">Loading…</p>
+      ) : (
+        <div className="space-y-6">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Clocked in</p>
+            <p className="text-sm text-slate-900">
+              {new Date(session.clockInAt).toLocaleTimeString()}
+              {session.clockOutAt ? ` → ${new Date(session.clockOutAt).toLocaleTimeString()}` : ' → still active'}
+            </p>
+          </div>
+
+          {built && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Net work</p>
+                <p className="font-mono text-lg font-semibold tabular-nums text-slate-900">{formatMinutes(built.reconciliation.netWorkingMinutes)}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Task time</p>
+                <p className="font-mono text-lg font-semibold tabular-nums text-slate-900">{formatMinutes(built.reconciliation.taskMinutes)}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Break time</p>
+                <p className="font-mono text-lg font-semibold tabular-nums text-slate-900">{formatMinutes(built.reconciliation.breakMinutes)}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Unallocated</p>
+                <p className={'font-mono text-lg font-semibold tabular-nums ' + (built.reconciliation.hasDataQualityException ? 'text-red-600' : 'text-slate-900')}>
+                  {formatMinutes(built.reconciliation.unallocatedMinutes)}
+                </p>
+              </div>
+            </div>
+          )}
+          {built?.reconciliation.hasDataQualityException && (
+            <p className="rounded-md bg-red-50 p-2 text-xs text-red-700">
+              Data quality exception — task time appears to exceed attendance time.
+            </p>
+          )}
+
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Today&rsquo;s activity</p>
+            {built && built.timeline.length === 0 ? (
+              <p className="text-sm text-slate-500">No activity recorded yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {built?.timeline.map((event, idx) => (
+                  <li key={idx} className="flex items-center gap-3 text-sm">
+                    <span
+                      className={
+                        'h-2 w-2 shrink-0 rounded-full ' +
+                        (event.type === 'ATTENDANCE' ? 'bg-green-500' : event.type === 'BREAK' ? 'bg-amber-500' : 'bg-blue-500')
+                      }
+                    />
+                    <span className="w-16 shrink-0 text-slate-500">
+                      {new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className="font-medium text-slate-800">{event.label}</span>
+                    <span className="text-slate-500">
+                      {event.end ? `→ ${new Date(event.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '(ongoing)'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </Drawer>
+  );
+}
+
 // AC-008-003-04: search by name/email and filter by department. The live list is
 // always small (only people currently clocked in), so filtering client-side over
 // the already-fetched rows is simpler than adding server-side query params for
@@ -30,12 +128,15 @@ interface LiveRow {
 export default function LiveAttendancePage() {
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState('');
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ['attendance', 'admin', 'live'],
     queryFn: () => api.get<LiveRow[]>('/attendance/admin/live'),
     refetchInterval: 15_000,
   });
   const { data: departments } = useDepartments();
+  const { data: currentUser } = useCurrentUser();
+  const canInspect = currentUser?.role === UserRole.ADMINISTRATOR;
 
   const rows = (data ?? []).filter((row) => {
     const matchesSearch = search
@@ -94,7 +195,13 @@ export default function LiveAttendancePage() {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr
+                  key={row.id}
+                  onClick={canInspect ? () => setSelectedSessionId(row.id) : undefined}
+                  className={
+                    'border-b border-slate-100 hover:bg-slate-50' + (canInspect ? ' cursor-pointer' : '')
+                  }
+                >
                   <td className="py-2.5 pr-4 font-medium text-slate-900">
                     {row.user.firstName} {row.user.surname}
                   </td>
@@ -122,6 +229,9 @@ export default function LiveAttendancePage() {
           </table>
         </div>
       </Card>
+      {selectedSessionId && (
+        <LiveAttendanceDrawer sessionId={selectedSessionId} onClose={() => setSelectedSessionId(null)} />
+      )}
     </div>
   );
 }

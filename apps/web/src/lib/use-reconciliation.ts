@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { reconcile, type ReconciliationResult } from '@atms/shared';
 import { api } from './api-client';
 
 export interface TimelineEvent {
@@ -94,6 +95,37 @@ export function computeTimelineGaps(timeline: TimelineEvent[]): TimelineGap[] {
   flushSession();
 
   return gaps;
+}
+
+interface SessionLike {
+  clockInAt: string;
+  clockOutAt: string | null;
+  breaks: { startAt: string; endAt: string | null }[];
+  taskTimeEntries: { startAt: string; endAt: string | null; task: { title: string } }[];
+}
+
+// Reproduces reconciliation.service.ts's getDailySummary transformation for a
+// single already-fetched session, so an admin viewing someone else's record
+// (no /reconciliation/:userId endpoint exists, nor should one for this) gets
+// the identical BR-008/009/010 numbers and timeline shape "my day" does, from
+// data the admin-accessible GET /attendance/:id already returns.
+export function buildSessionTimeline(session: SessionLike): {
+  timeline: TimelineEvent[];
+  reconciliation: ReconciliationResult;
+} {
+  const attendanceInterval = { start: new Date(session.clockInAt), end: session.clockOutAt ? new Date(session.clockOutAt) : null };
+  const breakIntervals = session.breaks.map((b) => ({ start: new Date(b.startAt), end: b.endAt ? new Date(b.endAt) : null }));
+  const taskIntervals = session.taskTimeEntries.map((t) => ({ start: new Date(t.startAt), end: t.endAt ? new Date(t.endAt) : null }));
+
+  const reconciliation = reconcile(attendanceInterval, breakIntervals, taskIntervals);
+
+  const timeline: TimelineEvent[] = [
+    { type: 'ATTENDANCE' as const, label: 'Clocked in', start: session.clockInAt, end: session.clockOutAt },
+    ...session.breaks.map((b) => ({ type: 'BREAK' as const, label: 'Break', start: b.startAt, end: b.endAt })),
+    ...session.taskTimeEntries.map((t) => ({ type: 'TASK' as const, label: t.task.title, start: t.startAt, end: t.endAt })),
+  ].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+  return { timeline, reconciliation };
 }
 
 export function formatMinutes(totalMinutes: number): string {
