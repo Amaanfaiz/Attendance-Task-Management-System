@@ -48,7 +48,11 @@ test('Admin: Live Attendance -> approve a correction -> run a report -> audit lo
   // --- Admin logs in through the real browser ---
   await page.goto('/login');
   await page.getByLabel('Email').fill(SEED_ADMIN_EMAIL);
-  await page.getByLabel('Password').fill(SEED_ADMIN_PASSWORD);
+  // exact: true - the login page's password field now sits next to a
+  // "Show password" toggle button, which also matches a non-exact
+  // getByLabel('Password') since Playwright does substring matching by
+  // default and "Show password" contains "password".
+  await page.getByLabel('Password', { exact: true }).fill(SEED_ADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/my-day/);
 
