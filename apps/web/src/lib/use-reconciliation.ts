@@ -129,9 +129,11 @@ export function buildSessionTimeline(session: SessionLike): {
 }
 
 export function formatMinutes(totalMinutes: number): string {
-  const h = Math.floor(totalMinutes / 60);
-  const m = Math.round(totalMinutes % 60);
-  return `${h}h ${m}m`;
+  const sign = totalMinutes < 0 ? '-' : '';
+  const abs = Math.abs(totalMinutes);
+  const h = Math.floor(abs / 60);
+  const m = Math.round(abs % 60);
+  return `${sign}${h}h ${m}m`;
 }
 
 export function todayIso(): string {
