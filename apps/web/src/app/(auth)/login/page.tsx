@@ -61,7 +61,13 @@ function LoginForm() {
           <Input type="email" autoComplete="email" className="pl-9" {...register('email')} />
         </div>
       </Field>
-      <Field label="Password" error={errors.password?.message}>
+      <label className="block">
+        <span className="mb-1 flex items-center justify-between">
+          <span className="text-sm font-medium text-slate-700">Password</span>
+          <Link href="/forgot-password" className="text-sm text-brand-700 hover:underline">
+            Forgot password?
+          </Link>
+        </span>
         <div className="relative">
           <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           <Input
@@ -79,12 +85,8 @@ function LoginForm() {
             {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
           </button>
         </div>
-      </Field>
-      <div className="flex justify-end text-sm">
-        <Link href="/forgot-password" className="text-brand-700 hover:underline">
-          Forgot password?
-        </Link>
-      </div>
+        {errors.password?.message && <span className="mt-1 block text-xs text-red-600">{errors.password.message}</span>}
+      </label>
       <Button
         icon={<ArrowRight size={16} aria-hidden="true" />}
         type="submit"

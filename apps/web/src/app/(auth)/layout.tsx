@@ -1,4 +1,4 @@
-import { LogIn, CircleCheck, Coffee, Code2, LogOut } from 'lucide-react';
+import { Clock, LogIn, CircleCheck, Coffee, Code2, LogOut } from 'lucide-react';
 
 const timelineSteps = [
   { icon: LogIn, label: 'Clock In', time: '09:00', color: 'bg-green-600' },
@@ -63,7 +63,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="flex min-h-screen flex-col bg-slate-50">
       <header className="flex items-center gap-3 px-6 py-5 sm:px-10">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm">
-          <LogIn size={18} aria-hidden="true" />
+          <Clock size={18} aria-hidden="true" />
         </span>
         <div>
           <p className="font-semibold text-slate-900">ATMS</p>
