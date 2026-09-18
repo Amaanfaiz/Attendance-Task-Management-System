@@ -17,7 +17,14 @@ type Size = 'md' | 'sm' | 'xs';
 const sizeClasses: Record<Size, string> = {
   md: 'w-full rounded-lg px-3 py-2 text-sm',
   sm: 'rounded-lg px-2 py-1 text-sm',
-  xs: 'rounded-md px-1.5 py-1 text-xs',
+  // A native <select>'s closed-state width scales with its longest <option>
+  // text when nothing constrains it - harmless for short fixed vocabularies
+  // (role/status), but every xs usage that lists real task titles (free text,
+  // effectively unbounded length) could blow out to 300px+ next to two small
+  // icon buttons. Capped + truncated so the closed box stays inline-toolbar
+  // sized regardless of what's assigned; the full title is still readable in
+  // the native dropdown list once opened.
+  xs: 'max-w-[7rem] truncate rounded-md px-1.5 py-1 text-xs',
 };
 
 export const Select = forwardRef<

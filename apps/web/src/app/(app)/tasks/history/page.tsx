@@ -198,7 +198,14 @@ export default function TaskTimeHistoryPage() {
                 <tr
                   key={e.id}
                   onClick={() => setSelectedEntry(e)}
-                  className="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
+                  onKeyDown={(ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                      ev.preventDefault();
+                      setSelectedEntry(e);
+                    }
+                  }}
+                  tabIndex={0}
+                  className="cursor-pointer border-b border-slate-100 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-inset"
                 >
                   <td className="py-2 pr-4 text-slate-600">{new Date(e.startAt).toLocaleDateString()}</td>
                   <td className="py-2 pr-4 font-medium text-slate-900">{e.task.title}</td>

@@ -81,12 +81,16 @@ function ToggleField({
   registration: UseFormRegisterReturn;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-1">
+    // The whole row is the label, not just the 44x24 switch - on a touch
+    // screen, requiring a tap to land on exactly the switch (while the
+    // adjacent text describing what it does isn't clickable at all) is a
+    // real usability gap, not just a visual one.
+    <label className="flex cursor-pointer items-start justify-between gap-4 py-1">
       <div>
         <p className="text-sm font-medium text-slate-700">{label}</p>
         {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
       </div>
-      <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center">
+      <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
         <input type="checkbox" className="peer sr-only" aria-label={label} {...registration} />
         <span
           className="absolute inset-0 rounded-full bg-slate-200 transition-colors peer-checked:bg-brand-600 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-400 peer-focus-visible:ring-offset-2"
@@ -96,8 +100,8 @@ function ToggleField({
           className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5"
           aria-hidden="true"
         />
-      </label>
-    </div>
+      </span>
+    </label>
   );
 }
 

@@ -228,8 +228,20 @@ export default function LiveAttendancePage() {
                 <tr
                   key={row.id}
                   onClick={canInspect ? () => setSelectedSessionId(row.id) : undefined}
+                  onKeyDown={
+                    canInspect
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedSessionId(row.id);
+                          }
+                        }
+                      : undefined
+                  }
+                  tabIndex={canInspect ? 0 : undefined}
                   className={
-                    'border-b border-slate-100 hover:bg-slate-50' + (canInspect ? ' cursor-pointer' : '')
+                    'border-b border-slate-100 hover:bg-slate-50' +
+                    (canInspect ? ' cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-inset' : '')
                   }
                 >
                   <td className="py-2.5 pr-4 font-medium text-slate-900">

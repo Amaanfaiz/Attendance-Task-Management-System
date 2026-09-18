@@ -218,7 +218,14 @@ export default function AuditLogPage() {
                 <tr
                   key={row.id}
                   onClick={() => setSelectedId(row.id)}
-                  className="cursor-pointer border-b border-slate-100 align-top hover:bg-slate-50"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedId(row.id);
+                    }
+                  }}
+                  tabIndex={0}
+                  className="cursor-pointer border-b border-slate-100 align-top hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-inset"
                 >
                   <td className="py-2.5 pr-4 whitespace-nowrap text-slate-600">{new Date(row.createdAt).toLocaleString()}</td>
                   <td className="py-2.5 pr-4 whitespace-nowrap font-medium text-slate-900">

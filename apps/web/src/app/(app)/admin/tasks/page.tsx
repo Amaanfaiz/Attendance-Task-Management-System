@@ -413,7 +413,14 @@ function AdminTasksPageInner() {
                 <tr
                   key={t.id}
                   onClick={() => setSelectedTaskId(t.id)}
-                  className="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedTaskId(t.id);
+                    }
+                  }}
+                  tabIndex={0}
+                  className="cursor-pointer border-b border-slate-100 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-inset"
                 >
                   <td className="py-2.5 pr-4 font-medium text-slate-900 hover:text-brand-700">{t.title}</td>
                   <td className="py-2.5 pr-4 text-slate-600">
