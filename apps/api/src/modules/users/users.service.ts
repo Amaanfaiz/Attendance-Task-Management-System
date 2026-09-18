@@ -210,6 +210,13 @@ export class UsersService {
         after: { status: input.status },
       });
     }
+    // role/status changes are audited separately above with their own before/after -
+    // this event covers the remaining profile fields only. Must list every one of
+    // them on both sides: the profile form always submits the full field set on
+    // every save (not just what the admin actually touched), so a `before` missing
+    // any of these would show it as "changed from nothing" on every single save,
+    // regardless of whether it was - found via a real Audit Log entry showing email
+    // and departmentId as newly-set when neither had been touched.
     await this.audit.record({
       actorId,
       action: AuditAction.USER_UPDATED,
@@ -218,9 +225,19 @@ export class UsersService {
       before: {
         firstName: before.firstName,
         surname: before.surname,
+        email: before.email,
         phoneNumber: before.phoneNumber,
+        departmentId: before.departmentId,
+        employeeNumber: before.employeeNumber,
       },
-      after: input,
+      after: {
+        firstName: input.firstName,
+        surname: input.surname,
+        email: input.email,
+        phoneNumber: input.phoneNumber,
+        departmentId: input.departmentId,
+        employeeNumber: input.employeeNumber,
+      },
     });
 
     return user;
