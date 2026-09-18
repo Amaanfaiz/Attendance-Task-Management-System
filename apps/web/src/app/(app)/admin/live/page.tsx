@@ -43,11 +43,11 @@ interface SessionDetail {
   taskTimeEntries: { id: string; startAt: string; endAt: string | null; task: { id: string; title: string } }[];
 }
 
-// GET /attendance/:id has no @AuditorAllowed() (RolesGuard leaves it open to
-// any authenticated user, but AuditorScopeGuard default-denies AUDITOR on
-// every route not explicitly marked) - the detail drawer is scoped to
-// Administrator to match, rather than adding a permission grant this pass
-// didn't ask for.
+// GET /attendance/:id is now @AuditorAllowed() too - same read-only scope as
+// this page's own list endpoint (admin/live), just one row's detail instead
+// of the summary table. Amaan's call after flagging it as an open question:
+// no reason a role that can already see the live list shouldn't see the
+// breakdown behind one of its own rows.
 function LiveAttendanceDrawer({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
   const { data: session } = useQuery({
     queryKey: ['attendance', 'session', sessionId],
@@ -145,16 +145,19 @@ export default function LiveAttendancePage() {
   });
   const { data: departments } = useDepartments();
   const { data: currentUser } = useCurrentUser();
-  const canInspect = currentUser?.role === UserRole.ADMINISTRATOR;
-  // GET /dashboard/admin/kpis is Administrator-only server-side (Auditor also
-  // reaches this page) - reusing it here rather than recomputing the same
-  // four counts client-side keeps this KPI row and the Admin Dashboard's
-  // always in agreement.
+  // GET /attendance/:id is @AuditorAllowed() (same read-only scope as this
+  // page's own list endpoint), so Auditor can open the detail drawer too -
+  // but GET /dashboard/admin/kpis below stays Administrator-only server-side,
+  // so it must not share this same flag or it'd 403 for Auditor.
+  const isAdmin = currentUser?.role === UserRole.ADMINISTRATOR;
+  const canInspect = isAdmin || currentUser?.role === UserRole.AUDITOR;
+  // Reusing this endpoint here rather than recomputing the same four counts
+  // client-side keeps this KPI row and the Admin Dashboard's always in agreement.
   const { data: kpis } = useQuery({
     queryKey: ['dashboard', 'admin', 'kpis'],
     queryFn: () => api.get<WorkforceKpis>('/dashboard/admin/kpis'),
     refetchInterval: 15_000,
-    enabled: canInspect,
+    enabled: isAdmin,
   });
 
   const rows = (data ?? []).filter((row) => {

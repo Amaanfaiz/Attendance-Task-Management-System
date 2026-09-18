@@ -51,12 +51,18 @@ export class AttendanceController {
     return this.attendanceService.getMyHistory(userId, from, to);
   }
 
+  // Auditor is read-only org-wide here too, same as admin/live just above -
+  // this is the drill-down into one row of that same list, not a new class
+  // of data. No @Roles() restriction otherwise: any authenticated user can
+  // still reach this for their own session, which the service itself still
+  // enforces below.
+  @AuditorAllowed()
   @Get(':id')
   getDetail(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.attendanceService.getSessionDetail(
       user.id,
       id,
-      user.role === UserRole.ADMINISTRATOR,
+      user.role === UserRole.ADMINISTRATOR || user.role === UserRole.AUDITOR,
     );
   }
 

@@ -175,7 +175,11 @@ export class AttendanceService {
     });
   }
 
-  async getSessionDetail(userId: string, sessionId: string, isAdmin: boolean) {
+  async getSessionDetail(
+    userId: string,
+    sessionId: string,
+    canViewAnySession: boolean,
+  ) {
     const session = await this.prisma.attendanceSession.findUnique({
       where: { id: sessionId },
       include: {
@@ -186,7 +190,7 @@ export class AttendanceService {
       },
     });
     if (!session) throw new NotFoundException('Attendance session not found');
-    if (!isAdmin && session.userId !== userId) {
+    if (!canViewAnySession && session.userId !== userId) {
       throw new BadRequestException('Not your attendance record');
     }
     return session;
