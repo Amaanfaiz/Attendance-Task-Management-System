@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { UseFormRegisterReturn, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Save } from 'lucide-react';
+import { Bell, Building2, CheckCircle, Mail, Plus, Save, Settings2 } from 'lucide-react';
 import { UpdateAppSettingsInput, updateAppSettingsSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useCreateDepartment, useDepartments } from '@/lib/use-departments';
@@ -31,7 +31,10 @@ function DepartmentsCard() {
 
   return (
     <Card>
-      <CardTitle>Departments</CardTitle>
+      <div className="mb-3 flex items-center gap-2">
+        <Building2 size={16} className="text-slate-400" aria-hidden="true" />
+        <CardTitle>Departments</CardTitle>
+      </div>
       {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
       {departments && departments.length > 0 && (
         <ul className="mb-3 flex flex-wrap gap-2">
@@ -62,6 +65,39 @@ function DepartmentsCard() {
         </Button>
       </div>
     </Card>
+  );
+}
+
+// Presentation only - a real checkbox under the hood (keyboard/tab/space all
+// work natively), styled as a switch since a settings screen full of plain
+// checkboxes reads as a form, not a set of on/off controls.
+function ToggleField({
+  label,
+  description,
+  registration,
+}: {
+  label: string;
+  description?: string;
+  registration: UseFormRegisterReturn;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-1">
+      <div>
+        <p className="text-sm font-medium text-slate-700">{label}</p>
+        {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
+      </div>
+      <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center">
+        <input type="checkbox" className="peer sr-only" aria-label={label} {...registration} />
+        <span
+          className="absolute inset-0 rounded-full bg-slate-200 transition-colors peer-checked:bg-brand-600 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-400 peer-focus-visible:ring-offset-2"
+          aria-hidden="true"
+        />
+        <span
+          className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5"
+          aria-hidden="true"
+        />
+      </label>
+    </div>
   );
 }
 
@@ -115,31 +151,46 @@ export default function AdminSettingsPage() {
         className="space-y-6"
       >
         {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-        {saved && <p className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-700">Settings saved.</p>}
+        {saved && (
+          <div className="flex items-center gap-2 rounded-md bg-emerald-50 p-3 text-sm text-emerald-700">
+            <CheckCircle size={16} className="shrink-0" aria-hidden="true" />
+            <span>Settings saved.</span>
+          </div>
+        )}
 
         <Card>
-          <CardTitle>General</CardTitle>
-          <div className="mt-3 space-y-3">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" className="h-4 w-4" {...register('requireRegistrationApproval')} />
-              Require administrator approval for new registrations
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" className="h-4 w-4" {...register('employeesCanCreateTasks')} />
-              Employees can create their own tasks
-            </label>
-            <Field label="Session inactivity timeout (minutes)" error={errors.sessionInactivityTimeoutMinutes?.message}>
-              <Input type="number" {...register('sessionInactivityTimeoutMinutes', { valueAsNumber: true })} />
-            </Field>
+          <div className="mb-3 flex items-center gap-2">
+            <Settings2 size={16} className="text-slate-400" aria-hidden="true" />
+            <CardTitle>General</CardTitle>
+          </div>
+          <div className="space-y-3 divide-y divide-slate-100">
+            <ToggleField
+              label="Require administrator approval for new registrations"
+              registration={register('requireRegistrationApproval')}
+            />
+            <div className="pt-3">
+              <ToggleField
+                label="Employees can create their own tasks"
+                registration={register('employeesCanCreateTasks')}
+              />
+            </div>
+            <div className="pt-3">
+              <Field label="Session inactivity timeout (minutes)" error={errors.sessionInactivityTimeoutMinutes?.message}>
+                <Input type="number" {...register('sessionInactivityTimeoutMinutes', { valueAsNumber: true })} />
+              </Field>
+            </div>
           </div>
         </Card>
 
         <Card>
-          <CardTitle>Reminders</CardTitle>
-          <p className="mt-1 text-xs text-slate-500">
+          <div className="mb-1 flex items-center gap-2">
+            <Bell size={16} className="text-slate-400" aria-hidden="true" />
+            <CardTitle>Reminders</CardTitle>
+          </div>
+          <p className="mb-3 text-xs text-slate-500">
             A background check runs every few minutes and creates a notification whenever one of these rules is met.
           </p>
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Missing clock-out threshold (minutes)" error={errors.missingClockOutThresholdMinutes?.message}>
               <Input type="number" {...register('missingClockOutThresholdMinutes', { valueAsNumber: true })} />
             </Field>
@@ -159,14 +210,15 @@ export default function AdminSettingsPage() {
         </Card>
 
         <Card>
-          <CardTitle>Email notifications</CardTitle>
-          <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" className="h-4 w-4" {...register('notificationsEmailEnabled')} />
-            Also send notifications by email (in addition to in-app)
-          </label>
-          <p className="mt-1 text-xs text-slate-500">
-            Requires an email provider to be configured on the server. If it isn&rsquo;t, this toggle has no effect and only in-app notifications are shown.
-          </p>
+          <div className="mb-3 flex items-center gap-2">
+            <Mail size={16} className="text-slate-400" aria-hidden="true" />
+            <CardTitle>Email notifications</CardTitle>
+          </div>
+          <ToggleField
+            label="Also send notifications by email (in addition to in-app)"
+            description="Requires an email provider to be configured on the server. If it isn't, this toggle has no effect and only in-app notifications are shown."
+            registration={register('notificationsEmailEnabled')}
+          />
         </Card>
 
         <Button icon={<Save size={16} aria-hidden="true" />} type="submit" loading={isSubmitting}>
