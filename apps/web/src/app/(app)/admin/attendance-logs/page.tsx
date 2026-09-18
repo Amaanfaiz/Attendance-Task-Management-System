@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { UserStatus } from '@atms/shared';
 import { api } from '@/lib/api-client';
@@ -10,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Field, Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { SessionDetailDrawer } from '@/components/attendance/session-detail-drawer';
 
 interface UserOption {
   id: string;
@@ -63,6 +63,7 @@ export default function AttendanceLogsPage() {
   const [userId, setUserId] = useState('');
   const [from, setFrom] = useState(defaultFrom());
   const [to, setTo] = useState(defaultTo());
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   const { data: users } = useQuery({
     queryKey: ['users', 'admin', 'active-for-logs'],
@@ -115,12 +116,12 @@ export default function AttendanceLogsPage() {
               </thead>
               <tbody>
                 {(sessions ?? []).map((s) => (
-                  <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="py-2.5 pr-4">
-                      <Link href={`/attendance/${s.id}`} className="font-medium text-slate-900 hover:text-brand-700 hover:underline">
-                        {new Date(s.clockInAt).toLocaleDateString()}
-                      </Link>
-                    </td>
+                  <tr
+                    key={s.id}
+                    onClick={() => setSelectedSessionId(s.id)}
+                    className="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
+                  >
+                    <td className="py-2.5 pr-4 font-medium text-slate-900">{new Date(s.clockInAt).toLocaleDateString()}</td>
                     <td className="py-2.5 pr-4 text-slate-600">{new Date(s.clockInAt).toLocaleTimeString()}</td>
                     <td className="py-2.5 pr-4 text-slate-600">{s.clockOutAt ? new Date(s.clockOutAt).toLocaleTimeString() : '—'}</td>
                     <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-slate-900">{formatMinutes(breakMinutes(s))}</td>
@@ -146,6 +147,9 @@ export default function AttendanceLogsPage() {
           </div>
         )}
       </Card>
+      {selectedSessionId && (
+        <SessionDetailDrawer sessionId={selectedSessionId} onClose={() => setSelectedSessionId(null)} />
+      )}
     </div>
   );
 }

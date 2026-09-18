@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { formatMinutes } from '@/lib/use-reconciliation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Field, Input } from '@/components/ui/input';
+import { SessionDetailDrawer } from '@/components/attendance/session-detail-drawer';
 
 interface BreakRow {
   id: string;
@@ -38,6 +38,7 @@ function netMinutes(session: SessionRow): number {
 export default function AttendanceHistoryPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   const { data: sessions, isLoading } = useQuery({
     queryKey: ['attendance', 'me', 'history', from, to],
@@ -75,12 +76,12 @@ export default function AttendanceHistoryPage() {
             </thead>
             <tbody>
               {(sessions ?? []).map((s) => (
-                <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="py-2 pr-4">
-                    <Link href={`/attendance/${s.id}`} className="text-slate-900 hover:underline">
-                      {new Date(s.clockInAt).toLocaleDateString()}
-                    </Link>
-                  </td>
+                <tr
+                  key={s.id}
+                  onClick={() => setSelectedSessionId(s.id)}
+                  className="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
+                >
+                  <td className="py-2 pr-4 font-medium text-slate-900">{new Date(s.clockInAt).toLocaleDateString()}</td>
                   <td className="py-2 pr-4 text-slate-600">{new Date(s.clockInAt).toLocaleTimeString()}</td>
                   <td className="py-2 pr-4 text-slate-600">{s.clockOutAt ? new Date(s.clockOutAt).toLocaleTimeString() : '—'}</td>
                   <td className="py-2 pr-4 text-right font-mono tabular-nums text-slate-900">{formatMinutes(breakMinutes(s))}</td>
@@ -105,6 +106,9 @@ export default function AttendanceHistoryPage() {
           </table>
         </div>
       </Card>
+      {selectedSessionId && (
+        <SessionDetailDrawer sessionId={selectedSessionId} onClose={() => setSelectedSessionId(null)} canRequestCorrection />
+      )}
     </div>
   );
 }
