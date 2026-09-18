@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ListPlus, Check, Save } from 'lucide-react';
+import { ListPlus, Check, Save, ListTodo, Loader, AlertTriangle, CircleCheck } from 'lucide-react';
 import {
   CreateTaskInput,
   TaskPriority,
@@ -24,6 +24,12 @@ import { Field, Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Drawer } from '@/components/ui/drawer';
+import { KpiCard } from '@/components/ui/kpi-card';
+
+interface TaskKpis {
+  tasksByStatus: Record<string, number>;
+  overdueTaskCount: number;
+}
 
 interface UserOption {
   id: string;
@@ -237,6 +243,16 @@ function AdminTasksPageInner() {
     queryKey: ['users', 'admin', 'active-for-assign'],
     queryFn: () => api.get<UserOption[]>('/users', { status: UserStatus.ACTIVE }),
   });
+  // Reuses the same GET /dashboard/admin/kpis Admin Dashboard and Live
+  // Attendance already call - counts here stay across the whole task list
+  // regardless of the filters below, rather than shrinking to match them.
+  const { data: kpis } = useQuery({
+    queryKey: ['dashboard', 'admin', 'kpis'],
+    queryFn: () => api.get<TaskKpis>('/dashboard/admin/kpis'),
+  });
+  const activeCount = kpis
+    ? (kpis.tasksByStatus.TO_DO ?? 0) + (kpis.tasksByStatus.IN_PROGRESS ?? 0) + (kpis.tasksByStatus.PAUSED ?? 0)
+    : 0;
 
   const {
     register,
@@ -267,6 +283,15 @@ function AdminTasksPageInner() {
           {showCreate ? 'Cancel' : 'New Task'}
         </Button>
       </div>
+
+      {kpis && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <KpiCard icon={ListTodo} label="Active" value={activeCount} accent="text-blue-600" />
+          <KpiCard icon={Loader} label="In Progress" value={kpis.tasksByStatus.IN_PROGRESS ?? 0} accent="text-amber-600" />
+          <KpiCard icon={AlertTriangle} label="Overdue" value={kpis.overdueTaskCount} accent="text-red-600" href="/admin/tasks?overdue=1" />
+          <KpiCard icon={CircleCheck} label="Completed" value={kpis.tasksByStatus.COMPLETED ?? 0} accent="text-green-600" />
+        </div>
+      )}
 
       {showCreate && (
         <Card>
