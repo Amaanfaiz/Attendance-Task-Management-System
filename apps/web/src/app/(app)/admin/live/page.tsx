@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { UserRole } from '@atms/shared';
+import { CircleCheck, Coffee, UserX, Timer } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useCurrentUser } from '@/lib/use-current-user';
 import { useDepartments } from '@/lib/use-departments';
@@ -12,6 +13,14 @@ import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Drawer } from '@/components/ui/drawer';
+import { KpiCard } from '@/components/ui/kpi-card';
+
+interface WorkforceKpis {
+  working: number;
+  onBreak: number;
+  notClockedIn: number;
+  runningTaskTimers: number;
+}
 
 function durationSince(clockInAt: string): string {
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(clockInAt).getTime()) / 60000));
@@ -137,6 +146,16 @@ export default function LiveAttendancePage() {
   const { data: departments } = useDepartments();
   const { data: currentUser } = useCurrentUser();
   const canInspect = currentUser?.role === UserRole.ADMINISTRATOR;
+  // GET /dashboard/admin/kpis is Administrator-only server-side (Auditor also
+  // reaches this page) - reusing it here rather than recomputing the same
+  // four counts client-side keeps this KPI row and the Admin Dashboard's
+  // always in agreement.
+  const { data: kpis } = useQuery({
+    queryKey: ['dashboard', 'admin', 'kpis'],
+    queryFn: () => api.get<WorkforceKpis>('/dashboard/admin/kpis'),
+    refetchInterval: 15_000,
+    enabled: canInspect,
+  });
 
   const rows = (data ?? []).filter((row) => {
     const matchesSearch = search
@@ -149,6 +168,14 @@ export default function LiveAttendancePage() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-slate-900">Live Attendance</h1>
+      {kpis && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <KpiCard icon={CircleCheck} label="Working" value={kpis.working} accent="text-green-600" />
+          <KpiCard icon={Coffee} label="On Break" value={kpis.onBreak} accent="text-amber-600" />
+          <KpiCard icon={UserX} label="Not Clocked In" value={kpis.notClockedIn} accent="text-slate-500" />
+          <KpiCard icon={Timer} label="Active Task Timers" value={kpis.runningTaskTimers} accent="text-blue-600" />
+        </div>
+      )}
       <Card>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <label htmlFor="live-search" className="text-sm text-slate-600">
