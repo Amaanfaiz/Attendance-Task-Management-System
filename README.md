@@ -20,7 +20,8 @@ packages/shared   Zod schemas, enums, and the time-reconciliation math shared by
 ```
 
 Backend modules: `auth`, `users`, `attendance`, `breaks`, `tasks`, `task-timer`,
-`reconciliation`, `corrections`, `audit`, `reports`, `settings`, `dashboard`.
+`reconciliation`, `corrections`, `audit`, `reports`, `settings`, `dashboard`,
+`notifications`.
 
 Data: PostgreSQL via Prisma. Concurrency-critical invariants (at most one active
 attendance session per user, at most one running task timer per user) are enforced by
@@ -113,8 +114,8 @@ report run, audit review).
 
 ## Demo accounts and walkthrough
 
-See the tracker's Dashboard sheet for delivery status. The intended demo path (both
-Employee and Administrator perspectives) is:
+See the tracker's Dashboard sheet for delivery status. The intended demo path (all
+three roles) is:
 
 1. Register a new account → sign in as admin → approve it.
 2. As the employee: clock in, start a task timer, take a break (timer auto-pauses),
@@ -123,6 +124,11 @@ Employee and Administrator perspectives) is:
 3. As the admin: view the live attendance table, the KPI dashboard, approve a
    correction request, run an attendance/task-time/unallocated-time report and export
    it, and review the audit log.
+4. As an Auditor (a third, read-only role — sign in with an account whose role an
+   admin has set to `AUDITOR`): confirm you land on Reports rather than the employee
+   dashboard, and that Live Attendance, Reports and Audit Log all work read-only —
+   every write action (clock in, approve a user, decide a correction, edit settings,
+   etc.) correctly 403s.
 
 ## Known limitations
 
