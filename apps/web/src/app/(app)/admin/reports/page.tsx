@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useQuery } from '@tanstack/react-query';
-import { Play, Download, FileSpreadsheet } from 'lucide-react';
+import { RotateCw, Download, FileSpreadsheet } from 'lucide-react';
 import { UserStatus } from '@atms/shared';
 import { api, exportUrl } from '@/lib/api-client';
 import { useDepartments } from '@/lib/use-departments';
@@ -245,7 +245,12 @@ export default function ReportsPage() {
               </Select>
             </Field>
           )}
-          <Button icon={<Play size={16} aria-hidden="true" />} onClick={() => refetch()}>Run</Button>
+          {/* The table below already re-fetches automatically whenever any filter
+              above changes (they're all part of this query's key) - this button
+              only re-runs the *same* filters, e.g. to pull in records recorded
+              since the page loaded. Labeled to match that, not "Run", which
+              implied filters were otherwise inert until clicked. */}
+          <Button icon={<RotateCw size={16} aria-hidden="true" />} variant="secondary" onClick={() => refetch()}>Refresh</Button>
           <a href={exportUrl(`/reports/${report}`, { from, to, format: 'csv', ...extraParams })}>
             <Button icon={<Download size={16} aria-hidden="true" />} variant="secondary">Export CSV</Button>
           </a>

@@ -68,8 +68,11 @@ test('Admin: Live Attendance -> approve a correction -> run a report -> audit lo
   await expect(correctionItem).not.toBeVisible();
 
   // --- Run Reports ---
+  // The report loads automatically on navigation (its filters are the query's
+  // key), so "Run" was renamed to "Refresh" to stop implying otherwise -
+  // clicking it here re-exercises that manual-refetch control still works.
   await page.goto('/admin/reports');
-  await page.getByRole('button', { name: 'Run' }).click();
+  await page.getByRole('button', { name: 'Refresh' }).click();
   await expect(page.getByRole('region', { name: 'Daily Attendance table' })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'employee' })).toBeVisible();
 
