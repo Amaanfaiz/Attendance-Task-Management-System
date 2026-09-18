@@ -12,8 +12,6 @@ import {
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 
-const UNALLOCATED_DRIFT_THRESHOLD_MINUTES = 45;
-
 // AC-008-002-01..04: workforce KPIs; AC-008-004-01..04: task status summary with overdue count.
 @ApiTags('dashboard')
 @Roles(UserRole.ADMINISTRATOR)
@@ -86,16 +84,19 @@ export class DashboardController {
       tasksByStatusRaw.map((r) => [r.status, r._count._all]),
     );
 
-    // Same reconciliation math as Reports/My Day - just applied across every
-    // currently open session to flag ones already drifting today, rather than
-    // waiting for a report to be run after the fact.
-    const highDriftCount = openSessions.filter((s) => {
+    // BR-010/AC-007-003-02/AC-010-004-03: unallocated time itself is not a
+    // performance signal, but the SRS does define a genuine exception here -
+    // reconcile() already flags impossible reconciliation (e.g. task time
+    // exceeding attendance time), the same "Data Quality Exceptions" category
+    // the Reports module reports on. Surfacing that flag, not an invented
+    // minutes-based magnitude threshold, is what's actually specified.
+    const dataQualityExceptionCount = openSessions.filter((s) => {
       const result = reconcile(
         { start: s.clockInAt, end: s.clockOutAt },
         s.breaks.map((b) => ({ start: b.startAt, end: b.endAt })),
         s.taskTimeEntries.map((t) => ({ start: t.startAt, end: t.endAt })),
       );
-      return result.unallocatedMinutes > UNALLOCATED_DRIFT_THRESHOLD_MINUTES;
+      return result.hasDataQualityException;
     }).length;
 
     return {
@@ -107,7 +108,7 @@ export class DashboardController {
       tasksByStatus,
       overdueTaskCount: overdueCount,
       missedClockOutCount,
-      highDriftCount,
+      dataQualityExceptionCount,
     };
   }
 }

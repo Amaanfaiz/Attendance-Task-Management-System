@@ -15,7 +15,7 @@ interface Kpis {
   tasksByStatus: Record<string, number>;
   overdueTaskCount: number;
   missedClockOutCount: number;
-  highDriftCount: number;
+  dataQualityExceptionCount: number;
 }
 
 export default function AdminDashboardPage() {
@@ -40,7 +40,7 @@ export default function AdminDashboardPage() {
           </div>
           <Card>
             <CardTitle>Attention Required</CardTitle>
-            {data.missedClockOutCount === 0 && data.highDriftCount === 0 && data.overdueTaskCount === 0 ? (
+            {data.missedClockOutCount === 0 && data.dataQualityExceptionCount === 0 && data.overdueTaskCount === 0 ? (
               <p className="flex items-center gap-2 text-sm text-slate-500">
                 <CircleCheckBig size={16} className="text-green-600" aria-hidden="true" />
                 No operational exceptions right now.
@@ -54,11 +54,11 @@ export default function AdminDashboardPage() {
                     detail="Session still open from a previous day"
                   />
                 )}
-                {data.highDriftCount > 0 && (
+                {data.dataQualityExceptionCount > 0 && (
                   <AttentionItem
-                    href="/admin/live"
-                    label={`${data.highDriftCount} session${data.highDriftCount === 1 ? '' : 's'} with high unallocated drift`}
-                    detail="Over 45m of working time without an active task timer today"
+                    href="/admin/reports"
+                    label={`${data.dataQualityExceptionCount} data quality exception${data.dataQualityExceptionCount === 1 ? '' : 's'}`}
+                    detail="Impossible reconciliation - task time exceeds recorded attendance"
                   />
                 )}
                 {data.overdueTaskCount > 0 && (
