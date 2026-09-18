@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { UserPlus } from 'lucide-react';
+import { ArrowRight, CheckCircle, Eye, EyeOff, Lock, Mail, Phone, User } from 'lucide-react';
 import { RegisterInput, registerSchema } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { Field, Input } from '@/components/ui/input';
 export default function RegisterPage() {
   const [done, setDone] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const {
     register,
     handleSubmit,
@@ -35,9 +36,12 @@ export default function RegisterPage() {
 
   if (done) {
     return (
-      <div className="space-y-4 text-sm">
-        <p className="rounded-md bg-green-50 p-3 text-green-800">{done}</p>
-        <Link href="/login" className="text-slate-700 underline">
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 rounded-md bg-green-50 p-3 text-sm text-green-800">
+          <CheckCircle size={18} className="shrink-0" aria-hidden="true" />
+          <span>{done}</span>
+        </div>
+        <Link href="/login" className="font-medium text-brand-700 hover:underline">
           Back to sign in
         </Link>
       </div>
@@ -46,36 +50,79 @@ export default function RegisterPage() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <h2 className="text-lg font-medium text-slate-900">Register</h2>
+      <span className="inline-flex w-fit items-center rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-700">
+        Unified Workspace Access
+      </span>
+      <div>
+        <h2 className="text-2xl font-semibold text-slate-900">Create your account</h2>
+        <p className="text-sm text-slate-500">Register for ATMS access.</p>
+      </div>
       {serverError && <p className="rounded-md bg-red-50 p-2 text-sm text-red-700">{serverError}</p>}
       <div className="grid grid-cols-2 gap-3">
         <Field label="First name" error={errors.firstName?.message}>
-          <Input {...register('firstName')} />
+          <div className="relative">
+            <User size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <Input className="pl-9" {...register('firstName')} />
+          </div>
         </Field>
         <Field label="Surname" error={errors.surname?.message}>
-          <Input {...register('surname')} />
+          <div className="relative">
+            <User size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <Input className="pl-9" {...register('surname')} />
+          </div>
         </Field>
       </div>
-      <Field label="Email" error={errors.email?.message}>
-        <Input type="email" {...register('email')} />
+      <Field label="Email address" error={errors.email?.message}>
+        <div className="relative">
+          <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <Input type="email" autoComplete="email" className="pl-9" {...register('email')} />
+        </div>
       </Field>
       <Field label="Phone number" error={errors.phoneNumber?.message}>
-        <Input {...register('phoneNumber')} />
+        <div className="relative">
+          <Phone size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <Input type="tel" className="pl-9" {...register('phoneNumber')} />
+        </div>
       </Field>
-      <Field label="Password" error={errors.password?.message}>
-        <Input type="password" {...register('password')} />
-      </Field>
-      <p className="text-xs text-slate-500">
-        Minimum 10 characters, with an uppercase letter, a lowercase letter and a number.
-      </p>
-      <div className="flex items-center justify-between text-sm">
-        <Link href="/login" className="text-slate-600 hover:underline">
-          Already have an account?
-        </Link>
+      <div>
+        <label htmlFor="register-password" className="mb-1 block text-sm font-medium text-slate-700">
+          Password
+        </label>
+        <div className="relative">
+          <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <Input
+            id="register-password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            className="pl-9 pr-9"
+            {...register('password')}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          >
+            {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+          </button>
+        </div>
+        {errors.password?.message ? (
+          <span className="mt-1 block text-xs text-red-600">{errors.password.message}</span>
+        ) : (
+          <p className="mt-1 text-xs text-slate-500">
+            Minimum 10 characters, with an uppercase letter, a lowercase letter and a number.
+          </p>
+        )}
       </div>
-      <Button icon={<UserPlus size={16} aria-hidden="true" />} type="submit" className="w-full" loading={isSubmitting}>
+      <Button icon={<ArrowRight size={16} aria-hidden="true" />} type="submit" className="w-full flex-row-reverse" loading={isSubmitting}>
         Register
       </Button>
+      <p className="rounded-lg bg-slate-50 py-3 text-center text-sm text-slate-600">
+        Already have an account?{' '}
+        <Link href="/login" className="font-medium text-brand-700 hover:underline">
+          Sign in
+        </Link>
+      </p>
     </form>
   );
 }

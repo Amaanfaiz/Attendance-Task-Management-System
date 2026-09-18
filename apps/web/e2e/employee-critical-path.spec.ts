@@ -17,7 +17,10 @@ test('Register -> Login -> Clock In -> Task -> Break -> Switch -> Clock Out -> R
   await page.getByLabel('Surname').fill('Employee');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Phone number').fill('5551234567');
-  await page.getByLabel('Password').fill(password);
+  // exact: true - Register now has a show/hide toggle next to the password
+  // field (same pattern as Login), whose aria-label="Show password" would
+  // otherwise also match a non-exact getByLabel('Password') query.
+  await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Register' }).click();
   await expect(page.getByText('An administrator must approve your account')).toBeVisible();
 
