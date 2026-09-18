@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useQuery } from '@tanstack/react-query';
-import { RotateCw, Download, FileSpreadsheet } from 'lucide-react';
+import { RotateCw, Download, FileSpreadsheet, CalendarClock, ListTodo, AlertTriangle, Coffee } from 'lucide-react';
 import { UserStatus } from '@atms/shared';
 import { api, exportUrl } from '@/lib/api-client';
 import { useDepartments } from '@/lib/use-departments';
@@ -18,11 +18,15 @@ interface TaskOption {
   title: string;
 }
 
+// Exactly the 4 report families the API actually has (GET /reports/attendance,
+// /task-time, /unallocated, /breaks) - shown as an explicit tab row rather
+// than a plain dropdown so this reads as "there are 4 kinds of report", not
+// as a long menu that invites assuming more exist.
 const REPORTS = [
-  { value: 'attendance', label: 'Daily Attendance' },
-  { value: 'task-time', label: 'Task Time' },
-  { value: 'unallocated', label: 'Unallocated Time' },
-  { value: 'breaks', label: 'Breaks' },
+  { value: 'attendance', label: 'Daily Attendance', icon: CalendarClock },
+  { value: 'task-time', label: 'Task Time', icon: ListTodo },
+  { value: 'unallocated', label: 'Unallocated Time', icon: AlertTriangle },
+  { value: 'breaks', label: 'Breaks', icon: Coffee },
 ] as const;
 
 interface AttendanceRow {
@@ -185,26 +189,39 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-slate-900">Reports</h1>
-      <Card>
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="Report">
-            <Select
-              value={report}
-              onChange={(e) => {
-                setReport(e.target.value as typeof report);
+
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Report">
+        {REPORTS.map((r) => {
+          const Icon = r.icon;
+          const active = report === r.value;
+          return (
+            <button
+              key={r.value}
+              role="tab"
+              aria-selected={active}
+              onClick={() => {
+                setReport(r.value);
                 setSummaryView(false);
                 setDrilldownEmployee(null);
                 setDepartmentId('');
                 setTaskId('');
               }}
+              className={clsx(
+                'inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors',
+                active
+                  ? 'border-brand-600 bg-brand-600 text-white shadow-sm'
+                  : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50',
+              )}
             >
-              {REPORTS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </Select>
-          </Field>
+              <Icon size={16} aria-hidden="true" />
+              {r.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <Card>
+        <div className="flex flex-wrap items-end gap-3">
           <Field label="From">
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           </Field>
@@ -245,37 +262,45 @@ export default function ReportsPage() {
               </Select>
             </Field>
           )}
-          {/* The table below already re-fetches automatically whenever any filter
-              above changes (they're all part of this query's key) - this button
-              only re-runs the *same* filters, e.g. to pull in records recorded
-              since the page loaded. Labeled to match that, not "Run", which
-              implied filters were otherwise inert until clicked. */}
-          <Button icon={<RotateCw size={16} aria-hidden="true" />} variant="secondary" onClick={() => refetch()}>Refresh</Button>
-          <a href={exportUrl(`/reports/${report}`, { from, to, format: 'csv', ...extraParams })}>
-            <Button icon={<Download size={16} aria-hidden="true" />} variant="secondary">Export CSV</Button>
-          </a>
-          <a href={exportUrl(`/reports/${report}`, { from, to, format: 'xlsx', ...extraParams })}>
-            <Button icon={<FileSpreadsheet size={16} aria-hidden="true" />} variant="secondary">Export XLSX</Button>
-          </a>
-          {report === 'attendance' && (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setSummaryView((v) => !v);
-                setDrilldownEmployee(null);
-              }}
-            >
-              {summaryView ? 'Show daily detail' : 'Summarise by employee'}
-            </Button>
-          )}
-          {report === 'unallocated' && (
-            <Button
-              variant="secondary"
-              onClick={() => setHideZeroUnallocated((v) => !v)}
-            >
-              {hideZeroUnallocated ? 'Show zero-unallocated days' : 'Hide zero-unallocated days'}
-            </Button>
-          )}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* The table below already re-fetches automatically whenever any filter
+                above changes (they're all part of this query's key) - this button
+                only re-runs the *same* filters, e.g. to pull in records recorded
+                since the page loaded. Labeled to match that, not "Run", which
+                implied filters were otherwise inert until clicked. */}
+            <Button icon={<RotateCw size={16} aria-hidden="true" />} variant="secondary" onClick={() => refetch()}>Refresh</Button>
+            {report === 'attendance' && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSummaryView((v) => !v);
+                  setDrilldownEmployee(null);
+                }}
+              >
+                {summaryView ? 'Show daily detail' : 'Summarise by employee'}
+              </Button>
+            )}
+            {report === 'unallocated' && (
+              <Button
+                variant="secondary"
+                onClick={() => setHideZeroUnallocated((v) => !v)}
+              >
+                {hideZeroUnallocated ? 'Show zero-unallocated days' : 'Hide zero-unallocated days'}
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-wide text-slate-500">Export:</span>
+            <a href={exportUrl(`/reports/${report}`, { from, to, format: 'csv', ...extraParams })}>
+              <Button icon={<Download size={16} aria-hidden="true" />} variant="secondary">CSV</Button>
+            </a>
+            <a href={exportUrl(`/reports/${report}`, { from, to, format: 'xlsx', ...extraParams })}>
+              <Button icon={<FileSpreadsheet size={16} aria-hidden="true" />} variant="secondary">XLSX</Button>
+            </a>
+          </div>
         </div>
       </Card>
 

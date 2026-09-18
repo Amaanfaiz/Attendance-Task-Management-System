@@ -61,10 +61,14 @@ test('Admin: Live Attendance -> approve a correction -> run a report -> audit lo
   await expect(page.getByRole('heading', { name: 'Live Attendance' })).toBeVisible();
 
   // --- Review Logs / Correct Exceptions: approve the seeded correction ---
+  // The queue row is now a single button that opens an Original -> Requested
+  // -> Impact -> Reason -> Decision drawer (restyled from inline Approve/
+  // Reject buttons on the row itself) - open it, then decide from inside.
   await page.goto('/admin/corrections');
   const correctionItem = page.getByRole('listitem').filter({ hasText: correctionReason });
   await expect(correctionItem).toBeVisible();
-  await correctionItem.getByRole('button', { name: 'Approve' }).click();
+  await correctionItem.getByRole('button').click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
   await expect(correctionItem).not.toBeVisible();
 
   // --- Run Reports ---
