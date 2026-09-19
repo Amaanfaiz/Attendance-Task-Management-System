@@ -84,11 +84,42 @@ export async function apiRequest<T = unknown>(path: string, options: RequestOpti
   return (await parseBody(res)) as T;
 }
 
+// Separate from apiRequest() because a file upload can't go through it: the
+// body is FormData, not JSON, and the browser must set its own multipart
+// Content-Type (with the boundary) - setting one manually breaks the upload.
+// Otherwise the same contract as everything else in `api`: same-origin,
+// cookie-based auth, one silent refresh-and-retry on a 401.
+async function apiUpload<T = unknown>(
+  path: string,
+  file: File,
+  skipAuthRetry = false,
+): Promise<T> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(buildUrl(path), {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (res.status === 401 && !skipAuthRetry) {
+    const refreshed = await tryRefresh();
+    if (refreshed) return apiUpload<T>(path, file, true);
+  }
+
+  if (!res.ok) {
+    const body = await parseBody(res);
+    throw new ApiError(res.status, body);
+  }
+  return (await parseBody(res)) as T;
+}
+
 export const api = {
   get: <T = unknown>(path: string, query?: RequestOptions['query']) =>
     apiRequest<T>(path, { method: 'GET', query }),
   post: <T = unknown>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'POST', body: body ?? {} }),
   patch: <T = unknown>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'PATCH', body: body ?? {} }),
+  upload: <T = unknown>(path: string, file: File) => apiUpload<T>(path, file),
 };
 
 export function exportUrl(path: string, query: Record<string, string | number | boolean | undefined>) {

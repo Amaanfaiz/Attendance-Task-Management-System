@@ -10,6 +10,7 @@ import {
   AdminCreateUserInput,
   AdminUpdateUserInput,
   AuditAction,
+  BulkImportUserRow,
   RejectUserInput,
   UpdateOwnProfileInput,
   UserStatus,
@@ -123,7 +124,21 @@ export class UsersService {
 
   // US-002-001: administrator onboards a user directly; a set-password link replaces a
   // plaintext temp password so no secret ever passes through the admin's hands.
-  async adminCreate(actorId: string, input: AdminCreateUserInput) {
+  // Shared by the manual "Create User" form and bulkImport() below - both need the
+  // exact same account-creation + audit + welcome-email behaviour per user, just
+  // reached from a different input source.
+  private async createOne(
+    actorId: string,
+    input: {
+      firstName: string;
+      surname: string;
+      email: string;
+      phoneNumber: string;
+      role: AdminCreateUserInput['role'];
+      departmentId?: string;
+      employeeNumber?: string;
+    },
+  ) {
     const existing = await this.prisma.user.findUnique({
       where: { email: input.email },
     });
@@ -156,7 +171,11 @@ export class UsersService {
       })
       .catch(rethrowAsConflict);
 
-    await this.authService.createPasswordResetToken(user.id, user.email);
+    await this.authService.createPasswordResetToken(
+      user.id,
+      user.email,
+      'welcome',
+    );
     await this.audit.record({
       actorId,
       action: AuditAction.USER_CREATED,
@@ -165,6 +184,65 @@ export class UsersService {
       after: { email: user.email, role: user.role },
     });
     return user;
+  }
+
+  async adminCreate(actorId: string, input: AdminCreateUserInput) {
+    return this.createOne(actorId, input);
+  }
+
+  // Bulk import from an uploaded spreadsheet (parsed by the controller into plain
+  // rows before this is called - keeps ExcelJS/multipart concerns out of the
+  // service). Each row is independent: one bad row (duplicate email, unknown
+  // department, failed validation) is reported and skipped, it never aborts the
+  // rest of the sheet - an admin importing 200 rows shouldn't lose 199 good ones
+  // over 1 typo.
+  async bulkImport(
+    actorId: string,
+    rows: { row: number; data: BulkImportUserRow }[],
+  ) {
+    const departments = await this.prisma.department.findMany();
+    const departmentByName = new Map(
+      departments.map((d) => [d.name.trim().toLowerCase(), d.id]),
+    );
+
+    const created: { row: number; email: string }[] = [];
+    const errors: { row: number; email?: string; message: string }[] = [];
+
+    for (const { row: rowNumber, data: row } of rows) {
+      try {
+        let departmentId: string | undefined;
+        if (row.departmentName) {
+          const match = departmentByName.get(
+            row.departmentName.trim().toLowerCase(),
+          );
+          if (!match) {
+            throw new BadRequestException(
+              `Unknown department "${row.departmentName}"`,
+            );
+          }
+          departmentId = match;
+        }
+        const user = await this.createOne(actorId, {
+          firstName: row.firstName,
+          surname: row.surname,
+          email: row.email,
+          phoneNumber: row.phoneNumber,
+          role: row.role,
+          departmentId,
+          employeeNumber: row.employeeNumber,
+        });
+        created.push({ row: rowNumber, email: user.email });
+      } catch (err) {
+        errors.push({
+          row: rowNumber,
+          email: row.email,
+          message:
+            err instanceof Error ? err.message : 'Could not create this row',
+        });
+      }
+    }
+
+    return { createdCount: created.length, created, errors };
   }
 
   async adminUpdate(
@@ -265,6 +343,10 @@ export class UsersService {
       targetType: 'User',
       targetId: userId,
     });
+    // Self-registered user already chose their own password at registration
+    // (unlike adminCreate/bulkImport's placeholder-password accounts) - no
+    // set-password link needed here, just confirmation the account is live.
+    await this.authService.sendAccountApprovedEmail(updated.email);
     return updated;
   }
 

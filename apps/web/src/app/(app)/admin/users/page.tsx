@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, Check, X, Users, UserCheck, Clock, UserX, Save } from 'lucide-react';
+import { UserPlus, Check, X, Users, UserCheck, Clock, UserX, Save, Upload, Download } from 'lucide-react';
 import {
   AdminCreateUserInput,
   AdminUpdateUserInput,
@@ -14,7 +14,7 @@ import {
   adminCreateUserSchema,
   adminUpdateUserSchema,
 } from '@atms/shared';
-import { api, ApiError } from '@/lib/api-client';
+import { api, ApiError, exportUrl } from '@/lib/api-client';
 import { useCurrentUser } from '@/lib/use-current-user';
 import { useDepartments } from '@/lib/use-departments';
 import { Card, CardTitle } from '@/components/ui/card';
@@ -33,6 +33,12 @@ interface UserRow {
   role: UserRole;
   status: UserStatus;
   department: { id: string; name: string } | null;
+}
+
+interface BulkImportResult {
+  createdCount: number;
+  created: { row: number; email: string }[];
+  errors: { row: number; email?: string; message: string }[];
 }
 
 interface UserDetail {
@@ -222,6 +228,10 @@ function UserManagementPageInner() {
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkResult, setBulkResult] = useState<BulkImportResult | null>(null);
+  const [bulkError, setBulkError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -297,6 +307,16 @@ function UserManagementPageInner() {
     onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not create user'),
   });
 
+  const bulkImport = useMutation({
+    mutationFn: (file: File) => api.upload<BulkImportResult>('/users/bulk-import', file),
+    onSuccess: (result) => {
+      invalidate();
+      setBulkResult(result);
+      setBulkFile(null);
+    },
+    onError: (err) => setBulkError(err instanceof ApiError ? err.message : 'Could not import this file'),
+  });
+
   const approve = useMutation({ mutationFn: (id: string) => api.post(`/users/${id}/approve`), onSuccess: invalidate });
   const reject = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
@@ -324,15 +344,99 @@ function UserManagementPageInner() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-900">User Management</h1>
         {canEdit && (
-          <Button
-            icon={!showCreate && <UserPlus size={16} aria-hidden="true" />}
-            variant="secondary"
-            onClick={() => setShowCreate((v) => !v)}
-          >
-            {showCreate ? 'Cancel' : 'New User'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              icon={!showBulkImport && <Upload size={16} aria-hidden="true" />}
+              variant="secondary"
+              onClick={() => {
+                setShowBulkImport((v) => !v);
+                setShowCreate(false);
+              }}
+            >
+              {showBulkImport ? 'Cancel' : 'Bulk Import'}
+            </Button>
+            <Button
+              icon={!showCreate && <UserPlus size={16} aria-hidden="true" />}
+              variant="secondary"
+              onClick={() => {
+                setShowCreate((v) => !v);
+                setShowBulkImport(false);
+              }}
+            >
+              {showCreate ? 'Cancel' : 'New User'}
+            </Button>
+          </div>
         )}
       </div>
+
+      {showBulkImport && canEdit && (
+        <Card>
+          <CardTitle>Bulk Import Users</CardTitle>
+          <p className="mb-3 text-sm text-slate-500">
+            Upload a .xlsx spreadsheet with columns First Name, Surname, Email, Phone Number, Role, Department,
+            Employee Number (Role and Department are optional).{' '}
+            <a
+              href={exportUrl('/users/bulk-import/template', {})}
+              className="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline"
+            >
+              <Download size={14} aria-hidden="true" />
+              Download a template
+            </a>
+            .
+          </p>
+          {bulkError && <p className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">{bulkError}</p>}
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="file"
+              accept=".xlsx"
+              aria-label="Spreadsheet to import"
+              onChange={(e) => {
+                setBulkError(null);
+                setBulkResult(null);
+                setBulkFile(e.target.files?.[0] ?? null);
+              }}
+              className="text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+            />
+            <Button
+              icon={<Upload size={16} aria-hidden="true" />}
+              disabled={!bulkFile}
+              loading={bulkImport.isPending}
+              onClick={() => {
+                if (!bulkFile) return;
+                setBulkError(null);
+                setBulkResult(null);
+                bulkImport.mutate(bulkFile);
+              }}
+            >
+              Import
+            </Button>
+          </div>
+
+          {bulkResult && (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm font-medium text-emerald-700">
+                {bulkResult.createdCount} user{bulkResult.createdCount === 1 ? '' : 's'} created. Each was emailed a
+                link to create their password.
+              </p>
+              {bulkResult.errors.length > 0 && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                  <p className="mb-1 text-sm font-medium text-amber-800">
+                    {bulkResult.errors.length} row{bulkResult.errors.length === 1 ? '' : 's'} skipped:
+                  </p>
+                  <ul className="space-y-0.5 text-sm text-amber-800">
+                    {bulkResult.errors.map((e) => (
+                      <li key={e.row}>
+                        Row {e.row}
+                        {e.email ? ` (${e.email})` : ''}: {e.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
 
       {kpiCounts && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

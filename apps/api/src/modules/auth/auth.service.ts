@@ -149,9 +149,15 @@ export class AuthService {
   // never written to the logger, only sent by email or (outside production only,
   // see forgotPassword) returned directly to the requester so local dev stays
   // testable without an email provider configured.
+  //
+  // `context` only changes the wording, never the mechanics - a fresh account
+  // (admin-created or bulk-imported, via UsersService.adminCreate/bulkImport)
+  // has never had a password, so "reset" is the wrong word for that email; a
+  // genuine forgot-password request keeps the original wording.
   async createPasswordResetToken(
     userId: string,
     email: string,
+    context: 'reset' | 'welcome' = 'reset',
   ): Promise<string> {
     const token = randomBytes(32).toString('hex');
     const tokenHash = createHash('sha256').update(token).digest('hex');
@@ -164,12 +170,29 @@ export class AuthService {
     });
 
     const resetUrl = `${this.config.get<string>('webOrigin')}/reset-password?token=${token}`;
+    const subject =
+      context === 'welcome'
+        ? 'You have been registered on ATMS - create your password'
+        : 'Reset your ATMS password';
+    const text =
+      context === 'welcome'
+        ? `You have been registered on ATMS. Use this link to create your password and sign in: ${resetUrl}\n\nThis link expires in 1 hour.`
+        : `Use this link to set your password: ${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can ignore this email.`;
+    await this.email.send(email, subject, text);
+    return token;
+  }
+
+  // Companion to the 'welcome' email above, for the other onboarding path: a
+  // user who self-registered (already chose their own password at
+  // registration) and is now approved by an admin - no password link needed,
+  // just confirmation the account is live. Called from UsersService.approve().
+  async sendAccountApprovedEmail(email: string): Promise<void> {
+    const loginUrl = `${this.config.get<string>('webOrigin')}/login`;
     await this.email.send(
       email,
-      'Reset your ATMS password',
-      `Use this link to set your password: ${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can ignore this email.`,
+      'You have been registered on ATMS',
+      `You have been registered and your account is now active. Sign in with the password you chose when registering: ${loginUrl}`,
     );
-    return token;
   }
 
   // AC-001-005-02: response never reveals whether the account exists - in

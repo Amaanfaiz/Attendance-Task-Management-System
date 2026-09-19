@@ -142,6 +142,22 @@ export const adminCreateUserSchema = z.object({
 });
 export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
 
+// Bulk import (Excel upload): same shape as adminCreateUserSchema, but the
+// spreadsheet gives a department by name (a human fills the sheet, not a
+// UUID picker), resolved against existing departments row-by-row on the
+// server. role tolerates blank/omitted cells, defaulting the same way the
+// manual "Create User" form does.
+export const bulkImportUserRowSchema = z.object({
+  firstName: z.string().min(1).max(100),
+  surname: z.string().min(1).max(100),
+  email: z.string().email(),
+  phoneNumber: z.string().min(1).max(30),
+  role: z.nativeEnum(UserRole).default(UserRole.EMPLOYEE),
+  departmentName: optionalTrimmedString(100),
+  employeeNumber: optionalTrimmedString(50),
+});
+export type BulkImportUserRow = z.infer<typeof bulkImportUserRowSchema>;
+
 export const adminUpdateUserSchema = z.object({
   firstName: z.string().min(1).max(100).optional(),
   surname: z.string().min(1).max(100).optional(),
