@@ -92,7 +92,7 @@ export default function MyDayPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">My Day</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">My Day</h1>
         <span className="text-sm text-slate-500">{today}</span>
       </div>
 
@@ -130,44 +130,26 @@ export default function MyDayPage() {
               </span>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {isWorking && (
-              <Button
-                icon={<Coffee size={16} aria-hidden="true" />}
-                variant="secondary"
-                onClick={() => run(() => breakStart.mutateAsync())}
-                loading={breakStart.isPending}
-              >
-                Start Break
-              </Button>
-            )}
-            {isOnBreak && (
-              <Button
-                icon={<Play size={16} aria-hidden="true" />}
-                variant="secondary"
-                onClick={() => run(() => breakEnd.mutateAsync())}
-                loading={breakEnd.isPending}
-              >
-                End Break
-              </Button>
-            )}
-            {/* Clock In/Out is the more consequential, less-frequent action of the
-                pair - pushed to the far right (not just a bigger gap) so it reads
-                as a distinct control from the break buttons instead of sitting
-                shoulder-to-shoulder with them. */}
-            <div className="ml-auto">
+          {/* Clock Out is deliberately not rendered at all while on break (not just
+              blocked on submit) - moved here from a shared row with the break
+              buttons, and the break buttons themselves moved out to their own
+              card below, so the two actions can't be misclicked for each other. */}
+          {isOnBreak ? (
+            <p className="text-sm text-slate-500">End your break below to clock out.</p>
+          ) : (
+            <>
               {isClockedOut && (
                 <Button icon={<LogIn size={16} aria-hidden="true" />} onClick={() => run(() => clockIn.mutateAsync())} loading={clockIn.isPending}>
                   Clock In
                 </Button>
               )}
-              {!isClockedOut && (
+              {isWorking && (
                 <Button icon={<LogOut size={16} aria-hidden="true" />} variant="danger" onClick={handleClockOut} loading={clockOut.isPending}>
                   Clock Out
                 </Button>
               )}
-            </div>
-          </div>
+            </>
+          )}
         </Card>
 
         <Card>
@@ -202,6 +184,41 @@ export default function MyDayPage() {
           )}
         </Card>
       </div>
+
+      {/* Its own card, its own row - physically apart from the Attendance
+          card's Clock In/Out button so the two can't be misclicked for each
+          other. Nothing to show once clocked out entirely. */}
+      {!isClockedOut && (
+        <Card>
+          <CardTitle>Break</CardTitle>
+          {isWorking && (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-slate-500">Pause your task timer and step away.</p>
+              <Button
+                icon={<Coffee size={16} aria-hidden="true" />}
+                variant="secondary"
+                onClick={() => run(() => breakStart.mutateAsync())}
+                loading={breakStart.isPending}
+              >
+                Start Break
+              </Button>
+            </div>
+          )}
+          {isOnBreak && (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-amber-700">You&apos;re on a break. Attendance is paused.</p>
+              <Button
+                icon={<Play size={16} aria-hidden="true" />}
+                variant="secondary"
+                onClick={() => run(() => breakEnd.mutateAsync())}
+                loading={breakEnd.isPending}
+              >
+                End Break
+              </Button>
+            </div>
+          )}
+        </Card>
+      )}
 
       <Card>
         <CardTitle>Today&apos;s Totals</CardTitle>
