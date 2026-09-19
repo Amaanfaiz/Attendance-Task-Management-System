@@ -130,17 +130,7 @@ export default function MyDayPage() {
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
-            {isClockedOut && (
-              <Button icon={<LogIn size={16} aria-hidden="true" />} onClick={() => run(() => clockIn.mutateAsync())} loading={clockIn.isPending}>
-                Clock In
-              </Button>
-            )}
-            {!isClockedOut && (
-              <Button icon={<LogOut size={16} aria-hidden="true" />} variant="danger" onClick={handleClockOut} loading={clockOut.isPending}>
-                Clock Out
-              </Button>
-            )}
+          <div className="flex flex-wrap items-center gap-3">
             {isWorking && (
               <Button
                 icon={<Coffee size={16} aria-hidden="true" />}
@@ -161,6 +151,22 @@ export default function MyDayPage() {
                 End Break
               </Button>
             )}
+            {/* Clock In/Out is the more consequential, less-frequent action of the
+                pair - pushed to the far right (not just a bigger gap) so it reads
+                as a distinct control from the break buttons instead of sitting
+                shoulder-to-shoulder with them. */}
+            <div className="ml-auto">
+              {isClockedOut && (
+                <Button icon={<LogIn size={16} aria-hidden="true" />} onClick={() => run(() => clockIn.mutateAsync())} loading={clockIn.isPending}>
+                  Clock In
+                </Button>
+              )}
+              {!isClockedOut && (
+                <Button icon={<LogOut size={16} aria-hidden="true" />} variant="danger" onClick={handleClockOut} loading={clockOut.isPending}>
+                  Clock Out
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
 
