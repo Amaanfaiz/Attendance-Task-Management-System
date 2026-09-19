@@ -325,7 +325,7 @@ export default function AdminCorrectionsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">Correction Review</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Correction Review</h1>
       {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       <Card>
         {isLoading && <p className="text-sm text-slate-500">Loading…</p>}

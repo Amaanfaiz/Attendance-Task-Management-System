@@ -94,7 +94,7 @@ export default function TaskDetailPage() {
       <Card>
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">{task.title}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{task.title}</h1>
             {task.description && <p className="mt-1 text-sm text-slate-600">{task.description}</p>}
           </div>
           <Badge color="blue">{task.priority}</Badge>

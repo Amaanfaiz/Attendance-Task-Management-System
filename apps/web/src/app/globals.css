@@ -27,3 +27,29 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Native <input type="date"> renders as a plain, low-contrast OS widget with
+   a tiny grey calendar icon - every date filter across Reports, Attendance
+   Logs, Task History etc. used it as-is. No-ops gracefully in Firefox (no
+   ::-webkit-calendar-picker-indicator there), so this only ever adds polish,
+   never breaks the control. */
+@layer base {
+  input[type='date'] {
+    color-scheme: light;
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    border-radius: 0.25rem;
+    padding: 2px;
+    opacity: 0.65;
+    transition:
+      opacity 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    background-color: var(--brand-50);
+  }
+}

@@ -28,7 +28,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">Administrator Dashboard</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Administrator Dashboard</h1>
       {isLoading && <p className="text-sm text-slate-500">Loading…</p>}
       {data && (
         <>

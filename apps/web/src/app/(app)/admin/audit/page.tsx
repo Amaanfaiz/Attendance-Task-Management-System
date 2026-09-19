@@ -171,7 +171,7 @@ export default function AuditLogPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">Audit Log</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Audit Log</h1>
       <Card>
         <div className="mb-3 flex flex-wrap items-end gap-3">
           <Field label="Filter by action">

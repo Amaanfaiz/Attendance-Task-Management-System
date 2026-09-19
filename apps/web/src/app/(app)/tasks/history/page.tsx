@@ -170,7 +170,7 @@ export default function TaskTimeHistoryPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">My Task Time History</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">My Task Time History</h1>
       <Card>
         <div className="mb-4 grid grid-cols-2 gap-3 sm:max-w-md">
           <Field label="From">

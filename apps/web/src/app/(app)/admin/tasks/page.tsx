@@ -274,7 +274,7 @@ function AdminTasksPageInner() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Task Management</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Task Management</h1>
         <Button
           icon={!showCreate && <ListPlus size={16} aria-hidden="true" />}
           variant="secondary"

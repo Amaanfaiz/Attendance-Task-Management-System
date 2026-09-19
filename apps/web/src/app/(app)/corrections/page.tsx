@@ -259,7 +259,7 @@ export default function MyCorrectionsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">My Corrections</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">My Corrections</h1>
 
       {corrections && corrections.length > 0 && (
         <div className="grid grid-cols-3 gap-4">

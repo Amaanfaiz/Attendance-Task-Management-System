@@ -170,7 +170,7 @@ export default function LiveAttendancePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">Live Attendance</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Live Attendance</h1>
       {kpis && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <KpiCard icon={CircleCheck} label="Working" value={kpis.working} accent="text-green-600" />

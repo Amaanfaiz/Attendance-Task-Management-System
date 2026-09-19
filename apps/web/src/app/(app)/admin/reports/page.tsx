@@ -188,7 +188,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">Reports</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Reports</h1>
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Report">
         {REPORTS.map((r) => {

@@ -143,7 +143,7 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">Settings</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Settings</h1>
 
       <DepartmentsCard />
 

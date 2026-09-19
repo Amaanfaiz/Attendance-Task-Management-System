@@ -342,7 +342,7 @@ function UserManagementPageInner() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">User Management</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">User Management</h1>
         {canEdit && (
           <div className="flex items-center gap-2">
             <Button
