@@ -255,7 +255,7 @@ export const reportFilterSchema = z.object({
 });
 export type ReportFilterInput = z.infer<typeof reportFilterSchema>;
 
-// EP-012: personal-profile fields an employee fills in after account creation.
+// EP-013: personal-profile fields an employee fills in after account creation.
 // Used both as the employee's *proposed* payload (goes through profile-change
 // approval) and the admin's *direct* payload (applies immediately) - same shape,
 // different endpoint. All-optional since a save is typically partial.
@@ -279,7 +279,7 @@ export const updateEmergencyContactSchema = z.object({
 });
 export type UpdateEmergencyContactInput = z.infer<typeof updateEmergencyContactSchema>;
 
-// EP-012: mirrors requestCorrectionSchema/decideCorrectionSchema - an employee
+// EP-013: mirrors requestCorrectionSchema/decideCorrectionSchema - an employee
 // proposes a change to one of the two profile-change target types, an admin
 // reviews and decides. proposedData is validated against whichever of the two
 // shapes above matches targetType by the service layer (a discriminated union

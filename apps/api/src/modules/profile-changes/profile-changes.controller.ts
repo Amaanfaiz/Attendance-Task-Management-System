@@ -17,7 +17,7 @@ import {
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { ProfileChangesService } from './profile-changes.service';
 
-// EP-012: request/pending/decide/direct mirrors corrections.controller.ts's
+// EP-013: request/pending/decide/direct mirrors corrections.controller.ts's
 // route shape exactly. No @AuditorAllowed() anywhere here - AuditorScopeGuard
 // default-denies the AUDITOR role on every route below.
 @ApiTags('profile-changes')

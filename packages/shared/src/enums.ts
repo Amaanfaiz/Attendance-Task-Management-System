@@ -95,7 +95,7 @@ export enum NotificationType {
   UNALLOCATED_TIME = 'UNALLOCATED_TIME',
 }
 
-// EP-012: 10 compliance document categories an employee or admin can upload
+// EP-013: 10 compliance document categories an employee or admin can upload
 // against a user's record.
 export enum DocumentType {
   PASSPORT = 'PASSPORT',
@@ -110,7 +110,7 @@ export enum DocumentType {
   MISCELLANEOUS = 'MISCELLANEOUS',
 }
 
-// EP-012: mirrors CorrectionTargetType/CorrectionStatus - an employee's edit
+// EP-013: mirrors CorrectionTargetType/CorrectionStatus - an employee's edit
 // to either of these two record types goes through the same request/approve
 // queue as attendance corrections, rather than applying immediately.
 export enum ProfileChangeTargetType {

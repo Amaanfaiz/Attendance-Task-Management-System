@@ -50,7 +50,7 @@ interface ProfileChangeRequestRow {
   createdAt: string;
 }
 
-// EP-012: unlike the admin drawer's direct-edit version, a self-service save
+// EP-013: unlike the admin drawer's direct-edit version, a self-service save
 // here goes through POST /profile-changes and sits PENDING until an admin
 // decides it - the form is replaced by a "pending" banner for that section
 // while one is outstanding (the backend also blocks a second concurrent

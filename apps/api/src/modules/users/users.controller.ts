@@ -221,7 +221,7 @@ export class UsersController {
     return this.usersService.findById(id);
   }
 
-  // EP-012: self-or-admin, no @AuditorAllowed() - Auditor is blocked from
+  // EP-013: self-or-admin, no @AuditorAllowed() - Auditor is blocked from
   // Personal Details/Emergency Contact same as Documents.
   @Get(':id/employee-profile')
   getEmployeeProfile(

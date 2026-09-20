@@ -338,7 +338,7 @@ model Notification {
   @@map("notifications")
 }
 
-// EP-012: self-service fields an employee fills in after account creation.
+// EP-013: self-service fields an employee fills in after account creation.
 // Row may not exist yet for a given user - created on first save (direct
 // admin edit or an approved ProfileChangeRequest).
 model EmployeeProfile {
@@ -375,7 +375,7 @@ model EmergencyContact {
   @@map("emergency_contacts")
 }
 
-// EP-012: mirrors CorrectionRequest's request -> pending review -> decide
+// EP-013: mirrors CorrectionRequest's request -> pending review -> decide
 // shape, but the proposed value is a JSON partial-update blob since the two
 // target shapes (profile fields vs contact fields) don't share a common pair
 // of typed columns the way correction targets share start/end.
@@ -403,7 +403,7 @@ model ProfileChangeRequest {
   @@map("profile_change_requests")
 }
 
-// EP-012: append-only - a re-upload creates a new row rather than overwriting
+// EP-013: append-only - a re-upload creates a new row rather than overwriting
 // (real compliance value for UK right-to-work/visa documents needing
 // periodic re-verification). Delete is a soft delete (see documents.service.ts) -
 // this app never hard-deletes anywhere, and a compliance document's removal

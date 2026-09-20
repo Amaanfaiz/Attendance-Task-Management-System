@@ -370,7 +370,7 @@ export class UsersService {
     return updated;
   }
 
-  // EP-012: self-or-admin read of the *current* live value - plain reads, no
+  // EP-013: self-or-admin read of the *current* live value - plain reads, no
   // request/approval involved (that's ProfileChangesService's concern).
   async getEmployeeProfile(
     actorId: string,

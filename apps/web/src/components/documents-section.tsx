@@ -37,7 +37,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// EP-012: shared between the admin User Detail Drawer and the self-service
+// EP-013: shared between the admin User Detail Drawer and the self-service
 // Profile page - both hit the exact same self-or-admin backend routes
 // (`/users/:id/documents*`), the only difference being whether Delete is
 // shown (admin-only, even over an employee's own documents - see

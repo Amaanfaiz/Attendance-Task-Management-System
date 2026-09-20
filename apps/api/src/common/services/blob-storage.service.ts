@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 
-// EP-012: server-mediated document storage - the API is the sole gatekeeper
+// EP-013: server-mediated document storage - the API is the sole gatekeeper
 // (upload/download both stream through it), no client-side direct-to-blob SAS
 // access, so the self-or-admin authorization check in documents.service.ts is
 // the one place access is enforced, and no CORS config is needed on the

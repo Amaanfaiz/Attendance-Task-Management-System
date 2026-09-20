@@ -84,7 +84,7 @@ interface EmergencyContactDetail {
   address: string | null;
 }
 
-// EP-012: admin drawer's Personal Details section - applies immediately via
+// EP-013: admin drawer's Personal Details section - applies immediately via
 // POST /profile-changes/direct (the admin drawer is the "direct" path;
 // self-service submissions on My Profile go through the request/approve
 // queue instead). bankAccountNumber is handled separately from the rest of

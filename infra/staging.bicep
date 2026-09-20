@@ -46,7 +46,7 @@ var acrName = replace('${namePrefix}acr${uniqueString(resourceGroup().id)}', '-'
 var dbServerName = '${namePrefix}-db-${uniqueString(resourceGroup().id)}'
 var apiAppName = '${namePrefix}-api'
 var webAppName = '${namePrefix}-web'
-// EP-012: matches the actual live name - fixed literal, same reasoning as main.bicep's
+// EP-013: matches the actual live name - fixed literal, same reasoning as main.bicep's
 // documentsStorageAccountName (namePrefix here is "atms-staging", which would overflow
 // the 24-char/no-hyphen storage account name limit if used directly).
 var documentsStorageAccountName = 'atmsdocsstg01'
@@ -97,7 +97,7 @@ resource dbDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06
   name: 'atms'
 }
 
-// EP-012: staging's own independent document storage, same isolation as every
+// EP-013: staging's own independent document storage, same isolation as every
 // other staging resource - see main.bicep's documentsStorageAccount for the
 // full rationale. Applied directly via `az storage account create` /
 // `az storage container create` on 2026-09-20.

@@ -46,7 +46,7 @@ var envName = '${namePrefix}-env'
 var apiAppName = '${namePrefix}-api'
 var webAppName = '${namePrefix}-web'
 var logAnalyticsName = '${namePrefix}-logs'
-// EP-012: matches the actual live name (Storage account names are 3-24 chars,
+// EP-013: matches the actual live name (Storage account names are 3-24 chars,
 // lowercase alphanumeric only, globally unique - a uniqueString() suffix like
 // the other resources use would overflow that limit once namePrefix + "docs"
 // is added, so this is a fixed literal instead).
@@ -98,7 +98,7 @@ resource dbDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06
   name: 'atms'
 }
 
-// EP-012: document storage (passport/eVisa/CV/etc. uploads) - a private
+// EP-013: document storage (passport/eVisa/CV/etc. uploads) - a private
 // container, no public blob access, server-mediated access only (the API is
 // the sole gatekeeper via BlobStorageService, no client-side SAS). Applied
 // directly via `az storage account create` / `az storage container create`

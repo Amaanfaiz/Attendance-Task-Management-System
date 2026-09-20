@@ -39,7 +39,7 @@ function displayValue(value: unknown): string {
   return String(value);
 }
 
-// EP-012: mirrors admin/corrections/page.tsx's ReviewDrawer shape - current vs
+// EP-013: mirrors admin/corrections/page.tsx's ReviewDrawer shape - current vs
 // proposed, a reason, an optional decision comment, Approve/Reject. The field
 // set differs by targetType (Personal Details vs Emergency Contact), so this
 // walks the union of keys present in either side instead of hardcoding one

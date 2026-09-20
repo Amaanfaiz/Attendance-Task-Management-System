@@ -22,7 +22,7 @@ import {
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { DocumentsService } from './documents.service';
 
-// EP-012: self-or-admin on list/upload/download, admin-only on delete. No
+// EP-013: self-or-admin on list/upload/download, admin-only on delete. No
 // @AuditorAllowed() anywhere - AuditorScopeGuard default-denies AUDITOR on
 // every route below.
 @ApiTags('documents')
