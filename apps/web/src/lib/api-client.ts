@@ -89,13 +89,20 @@ export async function apiRequest<T = unknown>(path: string, options: RequestOpti
 // Content-Type (with the boundary) - setting one manually breaks the upload.
 // Otherwise the same contract as everything else in `api`: same-origin,
 // cookie-based auth, one silent refresh-and-retry on a 401.
+// `fields` carries additional plain string fields alongside the file in the
+// same multipart request (e.g. document `type`) - the API reads them off
+// req.body the same way multer parses any other non-file form field.
 async function apiUpload<T = unknown>(
   path: string,
   file: File,
+  fields?: Record<string, string>,
   skipAuthRetry = false,
 ): Promise<T> {
   const formData = new FormData();
   formData.append('file', file);
+  if (fields) {
+    for (const [key, value] of Object.entries(fields)) formData.append(key, value);
+  }
   const res = await fetch(buildUrl(path), {
     method: 'POST',
     credentials: 'include',
@@ -104,7 +111,7 @@ async function apiUpload<T = unknown>(
 
   if (res.status === 401 && !skipAuthRetry) {
     const refreshed = await tryRefresh();
-    if (refreshed) return apiUpload<T>(path, file, true);
+    if (refreshed) return apiUpload<T>(path, file, fields, true);
   }
 
   if (!res.ok) {
@@ -119,7 +126,9 @@ export const api = {
     apiRequest<T>(path, { method: 'GET', query }),
   post: <T = unknown>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'POST', body: body ?? {} }),
   patch: <T = unknown>(path: string, body?: unknown) => apiRequest<T>(path, { method: 'PATCH', body: body ?? {} }),
-  upload: <T = unknown>(path: string, file: File) => apiUpload<T>(path, file),
+  delete: <T = unknown>(path: string) => apiRequest<T>(path, { method: 'DELETE' }),
+  upload: <T = unknown>(path: string, file: File, fields?: Record<string, string>) =>
+    apiUpload<T>(path, file, fields),
 };
 
 export function exportUrl(path: string, query: Record<string, string | number | boolean | undefined>) {

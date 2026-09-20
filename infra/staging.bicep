@@ -46,6 +46,10 @@ var acrName = replace('${namePrefix}acr${uniqueString(resourceGroup().id)}', '-'
 var dbServerName = '${namePrefix}-db-${uniqueString(resourceGroup().id)}'
 var apiAppName = '${namePrefix}-api'
 var webAppName = '${namePrefix}-web'
+// EP-012: matches the actual live name - fixed literal, same reasoning as main.bicep's
+// documentsStorageAccountName (namePrefix here is "atms-staging", which would overflow
+// the 24-char/no-hyphen storage account name limit if used directly).
+var documentsStorageAccountName = 'atmsdocsstg01'
 
 resource sharedEnv 'Microsoft.App/managedEnvironments@2023-05-01' existing = {
   name: sharedEnvironmentName
@@ -93,6 +97,33 @@ resource dbDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06
   name: 'atms'
 }
 
+// EP-012: staging's own independent document storage, same isolation as every
+// other staging resource - see main.bicep's documentsStorageAccount for the
+// full rationale. Applied directly via `az storage account create` /
+// `az storage container create` on 2026-09-20.
+resource documentsStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: documentsStorageAccountName
+  location: location
+  sku: { name: 'Standard_LRS' }
+  kind: 'StorageV2'
+  properties: {
+    minimumTlsVersion: 'TLS1_2'
+    allowBlobPublicAccess: false
+    supportsHttpsTrafficOnly: true
+  }
+}
+
+resource documentsBlobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+  parent: documentsStorageAccount
+  name: 'default'
+}
+
+resource documentsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: documentsBlobService
+  name: 'documents'
+  properties: { publicAccess: 'None' }
+}
+
 resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: apiAppName
   location: location
@@ -116,6 +147,7 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
         { name: 'database-url', value: 'postgresql://${dbAdminLogin}:${dbAdminPassword}@${dbServer.properties.fullyQualifiedDomainName}:5432/atms?sslmode=require' }
         { name: 'jwt-access-secret', value: jwtAccessSecret }
         { name: 'jwt-refresh-secret', value: jwtRefreshSecret }
+        { name: 'azure-storage-connection-string', value: 'DefaultEndpointsProtocol=https;AccountName=${documentsStorageAccount.name};AccountKey=${documentsStorageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net' }
       ]
     }
     template: {
@@ -135,6 +167,8 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
             { name: 'COOKIE_SECURE', value: 'true' }
             { name: 'COOKIE_SAME_SITE', value: 'none' }
             { name: 'WEB_ORIGIN', value: webOrigin }
+            { name: 'AZURE_STORAGE_CONNECTION_STRING', secretRef: 'azure-storage-connection-string' }
+            { name: 'AZURE_STORAGE_CONTAINER_NAME', value: 'documents' }
           ]
           probes: [
             {

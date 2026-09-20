@@ -1,17 +1,314 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckCircle, Phone, Save, User } from 'lucide-react';
-import { UpdateOwnProfileInput, updateOwnProfileSchema } from '@atms/shared';
+import { CheckCircle, Clock, Phone, Save, User } from 'lucide-react';
+import {
+  ProfileChangeTargetType,
+  UpdateEmergencyContactInput,
+  UpdateEmployeeProfileInput,
+  UpdateOwnProfileInput,
+  updateEmergencyContactSchema,
+  updateEmployeeProfileSchema,
+  updateOwnProfileSchema,
+} from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
 import { useCurrentUser } from '@/lib/use-current-user';
+import { DocumentsSection } from '@/components/documents-section';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+
+interface EmployeeProfileDetail {
+  address: string | null;
+  mobilePhone: string | null;
+  personalEmail: string | null;
+  bankAccountName: string | null;
+  bankSortCode: string | null;
+  bankAccountNumber: string | null; // masked - never the real value
+}
+
+interface EmergencyContactDetail {
+  fullName: string;
+  relationship: string;
+  mobile: string | null;
+  landline: string | null;
+  email: string | null;
+  address: string | null;
+}
+
+interface ProfileChangeRequestRow {
+  id: string;
+  targetType: 'EMPLOYEE_PROFILE' | 'EMERGENCY_CONTACT';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  proposedData: Record<string, unknown>;
+  reason: string;
+  decisionComment: string | null;
+  createdAt: string;
+}
+
+// EP-012: unlike the admin drawer's direct-edit version, a self-service save
+// here goes through POST /profile-changes and sits PENDING until an admin
+// decides it - the form is replaced by a "pending" banner for that section
+// while one is outstanding (the backend also blocks a second concurrent
+// submission, so this mirrors that rule rather than fighting it).
+function PersonalDetailsCard({ userId }: { userId: string }) {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [reason, setReason] = useState('');
+  const [newBankAccountNumber, setNewBankAccountNumber] = useState('');
+
+  const { data: profile } = useQuery({
+    queryKey: ['users', userId, 'employee-profile'],
+    queryFn: () => api.get<EmployeeProfileDetail | null>(`/users/${userId}/employee-profile`),
+  });
+  const { data: myRequests } = useQuery({
+    queryKey: ['profile-changes', 'mine'],
+    queryFn: () => api.get<ProfileChangeRequestRow[]>('/profile-changes/mine'),
+  });
+  const pending = (myRequests ?? []).find(
+    (r) => r.targetType === ProfileChangeTargetType.EMPLOYEE_PROFILE && r.status === 'PENDING',
+  );
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<UpdateEmployeeProfileInput>({
+    resolver: zodResolver(updateEmployeeProfileSchema),
+    values: profile
+      ? {
+          address: profile.address ?? '',
+          mobilePhone: profile.mobilePhone ?? '',
+          personalEmail: profile.personalEmail ?? '',
+          bankAccountName: profile.bankAccountName ?? '',
+          bankSortCode: profile.bankSortCode ?? '',
+        }
+      : undefined,
+  });
+
+  const submit = useMutation({
+    mutationFn: (values: UpdateEmployeeProfileInput) =>
+      api.post('/profile-changes', {
+        targetType: ProfileChangeTargetType.EMPLOYEE_PROFILE,
+        proposedData: newBankAccountNumber.trim()
+          ? { ...values, bankAccountNumber: newBankAccountNumber.trim() }
+          : values,
+        reason,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile-changes', 'mine'] });
+      setNewBankAccountNumber('');
+      setReason('');
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not submit this change'),
+  });
+
+  return (
+    <Card>
+      <CardTitle>Personal details</CardTitle>
+      {pending ? (
+        <div className="flex items-start gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+          <Clock size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="font-medium">Waiting on admin approval</p>
+            <p className="mt-0.5 text-amber-700">
+              Submitted {new Date(pending.createdAt).toLocaleString()}. You can submit another change once this one
+              is decided.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <form
+          onSubmit={handleSubmit((values) => {
+            setError(null);
+            submit.mutate(values);
+          })}
+          className="space-y-3"
+        >
+          {error && <p className="rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+          {success && (
+            <div className="flex items-center gap-2 rounded-md bg-green-50 p-2 text-sm text-green-700">
+              <CheckCircle size={16} className="shrink-0" aria-hidden="true" />
+              <span>Submitted for admin approval.</span>
+            </div>
+          )}
+          <Field label="Address" error={errors.address?.message}>
+            <Input {...register('address')} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Mobile phone" error={errors.mobilePhone?.message}>
+              <Input type="tel" {...register('mobilePhone')} />
+            </Field>
+            <Field label="Personal email" error={errors.personalEmail?.message}>
+              <Input type="email" {...register('personalEmail')} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Bank account name" error={errors.bankAccountName?.message}>
+              <Input {...register('bankAccountName')} />
+            </Field>
+            <Field label="Bank sort code" error={errors.bankSortCode?.message}>
+              <Input {...register('bankSortCode')} />
+            </Field>
+          </div>
+          <Field
+            label={`Bank account number${profile?.bankAccountNumber ? ` (currently ${profile.bankAccountNumber})` : ''}`}
+          >
+            <Input
+              placeholder="Leave blank to keep unchanged"
+              value={newBankAccountNumber}
+              onChange={(e) => setNewBankAccountNumber(e.target.value)}
+            />
+          </Field>
+          <Field
+            label="Reason for this change"
+            error={reason.length > 0 && reason.length < 10 ? `At least 10 characters required (${reason.length}/10)` : undefined}
+          >
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why you're updating this" />
+          </Field>
+          <Button
+            icon={<Save size={16} aria-hidden="true" />}
+            type="submit"
+            disabled={reason.trim().length < 10}
+            loading={isSubmitting || submit.isPending}
+          >
+            Submit for approval
+          </Button>
+        </form>
+      )}
+    </Card>
+  );
+}
+
+function EmergencyContactCard({ userId }: { userId: string }) {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [reason, setReason] = useState('');
+
+  const { data: contact } = useQuery({
+    queryKey: ['users', userId, 'emergency-contact'],
+    queryFn: () => api.get<EmergencyContactDetail | null>(`/users/${userId}/emergency-contact`),
+  });
+  const { data: myRequests } = useQuery({
+    queryKey: ['profile-changes', 'mine'],
+    queryFn: () => api.get<ProfileChangeRequestRow[]>('/profile-changes/mine'),
+  });
+  const pending = (myRequests ?? []).find(
+    (r) => r.targetType === ProfileChangeTargetType.EMERGENCY_CONTACT && r.status === 'PENDING',
+  );
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<UpdateEmergencyContactInput>({
+    resolver: zodResolver(updateEmergencyContactSchema),
+    values: contact
+      ? {
+          fullName: contact.fullName,
+          relationship: contact.relationship,
+          mobile: contact.mobile ?? '',
+          landline: contact.landline ?? '',
+          email: contact.email ?? '',
+          address: contact.address ?? '',
+        }
+      : undefined,
+  });
+
+  const submit = useMutation({
+    mutationFn: (values: UpdateEmergencyContactInput) =>
+      api.post('/profile-changes', {
+        targetType: ProfileChangeTargetType.EMERGENCY_CONTACT,
+        proposedData: values,
+        reason,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile-changes', 'mine'] });
+      setReason('');
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not submit this change'),
+  });
+
+  return (
+    <Card>
+      <CardTitle>Emergency contact</CardTitle>
+      {pending ? (
+        <div className="flex items-start gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+          <Clock size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="font-medium">Waiting on admin approval</p>
+            <p className="mt-0.5 text-amber-700">
+              Submitted {new Date(pending.createdAt).toLocaleString()}. You can submit another change once this one
+              is decided.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <form
+          onSubmit={handleSubmit((values) => {
+            setError(null);
+            submit.mutate(values);
+          })}
+          className="space-y-3"
+        >
+          {error && <p className="rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+          {success && (
+            <div className="flex items-center gap-2 rounded-md bg-green-50 p-2 text-sm text-green-700">
+              <CheckCircle size={16} className="shrink-0" aria-hidden="true" />
+              <span>Submitted for admin approval.</span>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Full name" error={errors.fullName?.message}>
+              <Input {...register('fullName')} />
+            </Field>
+            <Field label="Relationship" error={errors.relationship?.message}>
+              <Input {...register('relationship')} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Mobile" error={errors.mobile?.message}>
+              <Input type="tel" {...register('mobile')} />
+            </Field>
+            <Field label="Landline" error={errors.landline?.message}>
+              <Input type="tel" {...register('landline')} />
+            </Field>
+          </div>
+          <Field label="Email" error={errors.email?.message}>
+            <Input type="email" {...register('email')} />
+          </Field>
+          <Field label="Address" error={errors.address?.message}>
+            <Input {...register('address')} />
+          </Field>
+          <Field
+            label="Reason for this change"
+            error={reason.length > 0 && reason.length < 10 ? `At least 10 characters required (${reason.length}/10)` : undefined}
+          >
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why you're updating this" />
+          </Field>
+          <Button
+            icon={<Save size={16} aria-hidden="true" />}
+            type="submit"
+            disabled={reason.trim().length < 10}
+            loading={isSubmitting || submit.isPending}
+          >
+            Submit for approval
+          </Button>
+        </form>
+      )}
+    </Card>
+  );
+}
 
 export default function ProfilePage() {
   const { data: user } = useCurrentUser();
@@ -111,6 +408,14 @@ export default function ProfilePage() {
             Save
           </Button>
         </form>
+      </Card>
+
+      <PersonalDetailsCard userId={user.id} />
+      <EmergencyContactCard userId={user.id} />
+
+      <Card>
+        <CardTitle>Documents</CardTitle>
+        <DocumentsSection userId={user.id} canDelete={false} />
       </Card>
     </div>
   );

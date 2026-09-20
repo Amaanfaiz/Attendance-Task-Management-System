@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/services/audit.service';
 import { AuthService } from '../auth/auth.service';
+import { maskProfileData } from '../../common/utils/mask-profile-data';
 
 // AC-002-006-01: employeeNumber is unique at the DB level (nullable+unique) but had no
 // pre-check like email does, so a duplicate fell through as an unhandled 500 instead of
@@ -44,6 +46,8 @@ const SELECT_SAFE_FIELDS = {
   employeeNumber: true,
   departmentId: true,
   department: { select: { id: true, name: true } },
+  dateOfBirth: true,
+  jobTitle: true,
   approvedById: true,
   approvedAt: true,
   createdAt: true,
@@ -137,6 +141,8 @@ export class UsersService {
       role: AdminCreateUserInput['role'];
       departmentId?: string;
       employeeNumber?: string;
+      dateOfBirth?: string;
+      jobTitle?: string;
     },
   ) {
     const existing = await this.prisma.user.findUnique({
@@ -163,6 +169,8 @@ export class UsersService {
           status: UserStatus.ACTIVE,
           departmentId: input.departmentId,
           employeeNumber: input.employeeNumber,
+          dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : undefined,
+          jobTitle: input.jobTitle,
           passwordHash: placeholderPasswordHash,
           approvedById: actorId,
           approvedAt: new Date(),
@@ -263,7 +271,15 @@ export class UsersService {
     const user = await this.prisma.user
       .update({
         where: { id: userId },
-        data: input,
+        data: {
+          ...input,
+          dateOfBirth:
+            input.dateOfBirth !== undefined
+              ? input.dateOfBirth
+                ? new Date(input.dateOfBirth)
+                : null
+              : undefined,
+        },
         select: SELECT_SAFE_FIELDS,
       })
       .catch(rethrowAsConflict);
@@ -307,6 +323,8 @@ export class UsersService {
         phoneNumber: before.phoneNumber,
         departmentId: before.departmentId,
         employeeNumber: before.employeeNumber,
+        dateOfBirth: before.dateOfBirth,
+        jobTitle: before.jobTitle,
       },
       after: {
         firstName: input.firstName,
@@ -315,6 +333,8 @@ export class UsersService {
         phoneNumber: input.phoneNumber,
         departmentId: input.departmentId,
         employeeNumber: input.employeeNumber,
+        dateOfBirth: input.dateOfBirth,
+        jobTitle: input.jobTitle,
       },
     });
 
@@ -348,6 +368,33 @@ export class UsersService {
     // set-password link needed here, just confirmation the account is live.
     await this.authService.sendAccountApprovedEmail(updated.email);
     return updated;
+  }
+
+  // EP-012: self-or-admin read of the *current* live value - plain reads, no
+  // request/approval involved (that's ProfileChangesService's concern).
+  async getEmployeeProfile(
+    actorId: string,
+    userId: string,
+    canViewAny: boolean,
+  ) {
+    if (!canViewAny && actorId !== userId) {
+      throw new ForbiddenException('Not your profile');
+    }
+    const profile = await this.prisma.employeeProfile.findUnique({
+      where: { userId },
+    });
+    return maskProfileData(profile);
+  }
+
+  async getEmergencyContact(
+    actorId: string,
+    userId: string,
+    canViewAny: boolean,
+  ) {
+    if (!canViewAny && actorId !== userId) {
+      throw new ForbiddenException('Not your emergency contact');
+    }
+    return this.prisma.emergencyContact.findUnique({ where: { userId } });
   }
 
   async reject(actorId: string, userId: string, input: RejectUserInput) {

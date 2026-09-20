@@ -64,6 +64,30 @@ enum CorrectionStatus {
   REJECTED
 }
 
+enum DocumentType {
+  PASSPORT
+  RIGHT_TO_WORK_SHARE_CODE
+  EVISA
+  ADDRESS_PROOF
+  BANK_DETAILS
+  NI_NUMBER
+  CV
+  EDUCATION_CERTIFICATE
+  DRIVING_LICENCE
+  MISCELLANEOUS
+}
+
+enum ProfileChangeTargetType {
+  EMPLOYEE_PROFILE
+  EMERGENCY_CONTACT
+}
+
+enum ProfileChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Department {
   id        String   @id @default(uuid())
   name      String   @unique
@@ -85,6 +109,8 @@ model User {
   status         UserStatus @default(PENDING)
   employeeNumber String?    @unique
   departmentId   String?
+  dateOfBirth    DateTime?
+  jobTitle       String?
 
   approvedById String?
   approvedAt   DateTime?
@@ -96,16 +122,24 @@ model User {
   approvedBy User?       @relation("UserApprovals", fields: [approvedById], references: [id])
   approvals  User[]      @relation("UserApprovals")
 
-  attendanceSessions   AttendanceSession[]
-  createdTasks         Task[]               @relation("TaskCreator")
-  assignedTasks        Task[]               @relation("TaskAssignee")
-  taskTimeEntries      TaskTimeEntry[]
-  correctionsRequested CorrectionRequest[]  @relation("CorrectionRequester")
-  correctionsDecided   CorrectionRequest[]  @relation("CorrectionDecider")
-  auditLogs            AuditLog[]
-  passwordResetTokens  PasswordResetToken[]
-  refreshTokens        RefreshToken[]
-  notifications        Notification[]
+  attendanceSessions      AttendanceSession[]
+  createdTasks            Task[]                 @relation("TaskCreator")
+  assignedTasks           Task[]                 @relation("TaskAssignee")
+  taskTimeEntries         TaskTimeEntry[]
+  correctionsRequested    CorrectionRequest[]    @relation("CorrectionRequester")
+  correctionsDecided      CorrectionRequest[]    @relation("CorrectionDecider")
+  auditLogs               AuditLog[]
+  passwordResetTokens     PasswordResetToken[]
+  refreshTokens           RefreshToken[]
+  notifications           Notification[]
+  employeeProfile         EmployeeProfile?
+  emergencyContact        EmergencyContact?
+  documentsOwned           Document[]             @relation("DocumentOwner")
+  documentsUploaded        Document[]             @relation("DocumentUploader")
+  documentsDeleted         Document[]             @relation("DocumentDeleter")
+  profileChangesRequested ProfileChangeRequest[] @relation("ProfileChangeRequester")
+  profileChangesDecided   ProfileChangeRequest[] @relation("ProfileChangeDecider")
+  profileChangesOwned     ProfileChangeRequest[] @relation("ProfileChangeOwner")
 
   @@map("users")
 }
@@ -302,4 +336,96 @@ model Notification {
   @@index([userId, readAt])
   @@index([userId, dedupeKey])
   @@map("notifications")
+}
+
+// EP-012: self-service fields an employee fills in after account creation.
+// Row may not exist yet for a given user - created on first save (direct
+// admin edit or an approved ProfileChangeRequest).
+model EmployeeProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  address           String?
+  mobilePhone       String?
+  personalEmail     String?
+  bankAccountName   String?
+  bankSortCode      String?
+  bankAccountNumber String? // never returned unmasked by any GET - see users.service.ts
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("employee_profiles")
+}
+
+model EmergencyContact {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  fullName     String
+  relationship String
+  mobile       String?
+  landline     String?
+  email        String?
+  address      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("emergency_contacts")
+}
+
+// EP-012: mirrors CorrectionRequest's request -> pending review -> decide
+// shape, but the proposed value is a JSON partial-update blob since the two
+// target shapes (profile fields vs contact fields) don't share a common pair
+// of typed columns the way correction targets share start/end.
+model ProfileChangeRequest {
+  id            String                  @id @default(uuid())
+  userId        String // whose record this changes
+  requestedById String // the employee for a self-request, or the acting admin for a direct update
+  targetType    ProfileChangeTargetType
+  proposedData  Json
+  reason        String
+  status        ProfileChangeStatus     @default(PENDING)
+
+  decidedById     String?
+  decidedAt       DateTime?
+  decisionComment String?
+
+  createdAt DateTime @default(now())
+
+  user        User  @relation("ProfileChangeOwner", fields: [userId], references: [id], onDelete: Cascade)
+  requestedBy User  @relation("ProfileChangeRequester", fields: [requestedById], references: [id])
+  decidedBy   User? @relation("ProfileChangeDecider", fields: [decidedById], references: [id])
+
+  @@index([status])
+  @@index([userId, targetType])
+  @@map("profile_change_requests")
+}
+
+// EP-012: append-only - a re-upload creates a new row rather than overwriting
+// (real compliance value for UK right-to-work/visa documents needing
+// periodic re-verification). Delete is a soft delete (see documents.service.ts) -
+// this app never hard-deletes anywhere, and a compliance document's removal
+// itself needs an audit trail.
+model Document {
+  id            String       @id @default(uuid())
+  userId        String
+  type          DocumentType
+  fileName      String
+  mimeType      String
+  fileSizeBytes Int
+  blobPath      String
+  uploadedById  String
+  deletedById   String?
+  deletedAt     DateTime?
+  createdAt     DateTime     @default(now())
+
+  user       User  @relation("DocumentOwner", fields: [userId], references: [id], onDelete: Cascade)
+  uploadedBy User  @relation("DocumentUploader", fields: [uploadedById], references: [id])
+  deletedBy  User? @relation("DocumentDeleter", fields: [deletedById], references: [id])
+
+  @@index([userId, type])
+  @@index([userId, deletedAt])
+  @@map("documents")
 }

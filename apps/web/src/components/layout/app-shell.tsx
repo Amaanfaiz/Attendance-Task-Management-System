@@ -21,6 +21,7 @@ import {
   FileCheck,
   ScrollText,
   Settings,
+  UserCog,
   Menu,
   X,
   type LucideIcon,
@@ -45,6 +46,7 @@ const navIcons: Record<string, LucideIcon> = {
   '/admin/tasks': ListChecks,
   '/admin/reports': BarChart3,
   '/admin/corrections': FileCheck,
+  '/admin/profile-changes': UserCog,
   '/admin/audit': ScrollText,
   '/admin/settings': Settings,
 };
@@ -66,6 +68,7 @@ const adminLinks = [
   { href: '/admin/tasks', label: 'Task Management' },
   { href: '/admin/reports', label: 'Reports' },
   { href: '/admin/corrections', label: 'Correction Review' },
+  { href: '/admin/profile-changes', label: 'Profile Changes' },
   { href: '/admin/audit', label: 'Audit Log' },
   { href: '/admin/settings', label: 'Settings' },
 ];
@@ -223,7 +226,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {links.map(navLink)}
           </nav>
         )}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        {/* TRIAL - was flat white; a barely-there corner tint instead of the
+            hero-level treatment on the auth pages, since this is what people
+            look at for 8 hours a day, not once a session. Revert by dropping
+            this className back to "flex-1 overflow-y-auto p-4 md:p-6". */}
+        <main className="app-main-bg flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

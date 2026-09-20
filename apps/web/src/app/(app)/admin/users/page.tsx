@@ -9,14 +9,20 @@ import { UserPlus, Check, X, Users, UserCheck, Clock, UserX, Save, Upload, Downl
 import {
   AdminCreateUserInput,
   AdminUpdateUserInput,
+  ProfileChangeTargetType,
+  UpdateEmergencyContactInput,
+  UpdateEmployeeProfileInput,
   UserRole,
   UserStatus,
   adminCreateUserSchema,
   adminUpdateUserSchema,
+  updateEmergencyContactSchema,
+  updateEmployeeProfileSchema,
 } from '@atms/shared';
 import { api, ApiError, exportUrl } from '@/lib/api-client';
 import { useCurrentUser } from '@/lib/use-current-user';
 import { useDepartments } from '@/lib/use-departments';
+import { DocumentsSection } from '@/components/documents-section';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
@@ -52,10 +58,215 @@ interface UserDetail {
   employeeNumber: string | null;
   departmentId: string | null;
   department: { id: string; name: string } | null;
+  dateOfBirth: string | null;
+  jobTitle: string | null;
   approvedById: string | null;
   approvedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+interface EmployeeProfileDetail {
+  address: string | null;
+  mobilePhone: string | null;
+  personalEmail: string | null;
+  bankAccountName: string | null;
+  bankSortCode: string | null;
+  bankAccountNumber: string | null; // masked (e.g. "••••5678") - never the real value
+}
+
+interface EmergencyContactDetail {
+  fullName: string;
+  relationship: string;
+  mobile: string | null;
+  landline: string | null;
+  email: string | null;
+  address: string | null;
+}
+
+// EP-012: admin drawer's Personal Details section - applies immediately via
+// POST /profile-changes/direct (the admin drawer is the "direct" path;
+// self-service submissions on My Profile go through the request/approve
+// queue instead). bankAccountNumber is handled separately from the rest of
+// the form: the GET only ever returns the last-4-masked value, so pre-filling
+// it into the input the way every other field is pre-filled would resave the
+// mask itself as the "real" number the instant the admin submits without
+// touching it. Left blank and only sent if the admin actually types a new one.
+function PersonalDetailsSection({ userId }: { userId: string }) {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [newBankAccountNumber, setNewBankAccountNumber] = useState('');
+
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ['users', userId, 'employee-profile'],
+    queryFn: () => api.get<EmployeeProfileDetail | null>(`/users/${userId}/employee-profile`),
+  });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<UpdateEmployeeProfileInput>({
+    resolver: zodResolver(updateEmployeeProfileSchema),
+    values: profile
+      ? {
+          address: profile.address ?? '',
+          mobilePhone: profile.mobilePhone ?? '',
+          personalEmail: profile.personalEmail ?? '',
+          bankAccountName: profile.bankAccountName ?? '',
+          bankSortCode: profile.bankSortCode ?? '',
+        }
+      : undefined,
+  });
+
+  const save = useMutation({
+    mutationFn: (values: UpdateEmployeeProfileInput) =>
+      api.post('/profile-changes/direct', {
+        userId,
+        targetType: ProfileChangeTargetType.EMPLOYEE_PROFILE,
+        data: newBankAccountNumber.trim()
+          ? { ...values, bankAccountNumber: newBankAccountNumber.trim() }
+          : values,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', userId, 'employee-profile'] });
+      setNewBankAccountNumber('');
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not save changes'),
+  });
+
+  if (isLoading) return <p className="text-sm text-slate-500">Loading…</p>;
+
+  return (
+    <form
+      onSubmit={handleSubmit((values) => {
+        setError(null);
+        save.mutate(values);
+      })}
+      className="space-y-3"
+    >
+      {error && <p className="rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+      {saved && <p className="rounded-md bg-emerald-50 p-2 text-sm text-emerald-700">Saved.</p>}
+      <Field label="Address" error={errors.address?.message}>
+        <Input {...register('address')} />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Mobile phone" error={errors.mobilePhone?.message}>
+          <Input type="tel" {...register('mobilePhone')} />
+        </Field>
+        <Field label="Personal email" error={errors.personalEmail?.message}>
+          <Input type="email" {...register('personalEmail')} />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Bank account name" error={errors.bankAccountName?.message}>
+          <Input {...register('bankAccountName')} />
+        </Field>
+        <Field label="Bank sort code" error={errors.bankSortCode?.message}>
+          <Input {...register('bankSortCode')} />
+        </Field>
+      </div>
+      <Field
+        label={`Bank account number${profile?.bankAccountNumber ? ` (currently ${profile.bankAccountNumber})` : ''}`}
+      >
+        <Input
+          placeholder="Leave blank to keep unchanged"
+          value={newBankAccountNumber}
+          onChange={(e) => setNewBankAccountNumber(e.target.value)}
+        />
+      </Field>
+      <Button icon={<Save size={16} aria-hidden="true" />} type="submit" loading={isSubmitting || save.isPending}>
+        Save personal details
+      </Button>
+    </form>
+  );
+}
+
+function EmergencyContactSection({ userId }: { userId: string }) {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const { data: contact, isLoading } = useQuery({
+    queryKey: ['users', userId, 'emergency-contact'],
+    queryFn: () => api.get<EmergencyContactDetail | null>(`/users/${userId}/emergency-contact`),
+  });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<UpdateEmergencyContactInput>({
+    resolver: zodResolver(updateEmergencyContactSchema),
+    values: contact
+      ? {
+          fullName: contact.fullName,
+          relationship: contact.relationship,
+          mobile: contact.mobile ?? '',
+          landline: contact.landline ?? '',
+          email: contact.email ?? '',
+          address: contact.address ?? '',
+        }
+      : undefined,
+  });
+
+  const save = useMutation({
+    mutationFn: (values: UpdateEmergencyContactInput) =>
+      api.post('/profile-changes/direct', {
+        userId,
+        targetType: ProfileChangeTargetType.EMERGENCY_CONTACT,
+        data: values,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', userId, 'emergency-contact'] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not save changes'),
+  });
+
+  if (isLoading) return <p className="text-sm text-slate-500">Loading…</p>;
+
+  return (
+    <form
+      onSubmit={handleSubmit((values) => {
+        setError(null);
+        save.mutate(values);
+      })}
+      className="space-y-3"
+    >
+      {error && <p className="rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+      {saved && <p className="rounded-md bg-emerald-50 p-2 text-sm text-emerald-700">Saved.</p>}
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Full name" error={errors.fullName?.message}>
+          <Input {...register('fullName')} />
+        </Field>
+        <Field label="Relationship" error={errors.relationship?.message}>
+          <Input {...register('relationship')} />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Mobile" error={errors.mobile?.message}>
+          <Input type="tel" {...register('mobile')} />
+        </Field>
+        <Field label="Landline" error={errors.landline?.message}>
+          <Input type="tel" {...register('landline')} />
+        </Field>
+      </div>
+      <Field label="Email" error={errors.email?.message}>
+        <Input type="email" {...register('email')} />
+      </Field>
+      <Field label="Address" error={errors.address?.message}>
+        <Input {...register('address')} />
+      </Field>
+      <Button icon={<Save size={16} aria-hidden="true" />} type="submit" loading={isSubmitting || save.isPending}>
+        Save emergency contact
+      </Button>
+    </form>
+  );
 }
 
 const statusColor: Record<UserStatus, 'slate' | 'green' | 'amber' | 'red'> = {
@@ -94,6 +305,8 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
           phoneNumber: user.phoneNumber,
           departmentId: user.departmentId ?? '',
           employeeNumber: user.employeeNumber ?? '',
+          dateOfBirth: user.dateOfBirth ? user.dateOfBirth.slice(0, 10) : '',
+          jobTitle: user.jobTitle ?? '',
         }
       : undefined,
   });
@@ -207,10 +420,33 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
                   <Input placeholder="Leave blank if unused" {...register('employeeNumber')} />
                 </Field>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Date of birth" error={errors.dateOfBirth?.message}>
+                  <Input type="date" {...register('dateOfBirth')} />
+                </Field>
+                <Field label="Job title" error={errors.jobTitle?.message}>
+                  <Input {...register('jobTitle')} />
+                </Field>
+              </div>
               <Button icon={<Save size={16} aria-hidden="true" />} type="submit" loading={isSubmitting}>
                 Save changes
               </Button>
             </form>
+          </div>
+
+          <div className="border-t border-slate-200 pt-5">
+            <CardTitle>Personal details</CardTitle>
+            <PersonalDetailsSection userId={userId} />
+          </div>
+
+          <div className="border-t border-slate-200 pt-5">
+            <CardTitle>Emergency contact</CardTitle>
+            <EmergencyContactSection userId={userId} />
+          </div>
+
+          <div className="border-t border-slate-200 pt-5">
+            <CardTitle>Documents</CardTitle>
+            <DocumentsSection userId={userId} canDelete />
           </div>
         </div>
       )}
@@ -472,6 +708,14 @@ function UserManagementPageInner() {
             <Field label="Phone number" error={errors.phoneNumber?.message}>
               <Input {...register('phoneNumber')} />
             </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Date of birth" error={errors.dateOfBirth?.message}>
+                <Input type="date" {...register('dateOfBirth')} />
+              </Field>
+              <Field label="Job title" error={errors.jobTitle?.message}>
+                <Input {...register('jobTitle')} />
+              </Field>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Role">
                 <Select {...register('role')}>

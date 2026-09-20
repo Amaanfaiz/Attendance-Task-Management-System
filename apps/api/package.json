@@ -30,6 +30,7 @@
   "dependencies": {
     "@atms/shared": "*",
     "@azure/communication-email": "^1.1.0",
+    "@azure/storage-blob": "^12.33.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^10.0.0",

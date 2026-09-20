@@ -23,4 +23,12 @@ export default () => ({
     // RestError: Request body validation error. See property 'senderAddress'.
     from: process.env.EMAIL_FROM ?? 'DoNotReply@azurecomm.net',
   },
+  storage: {
+    // Unset in dev/test on purpose, same reasoning as email.acsConnectionString -
+    // but BlobStorageService.upload()/download() throw rather than no-op if this
+    // is missing (unlike email), since a silently-discarded document upload would
+    // be a compliance failure, not a recoverable missed notification.
+    connectionString: process.env.AZURE_STORAGE_CONNECTION_STRING,
+    containerName: process.env.AZURE_STORAGE_CONTAINER_NAME ?? 'documents',
+  },
 });

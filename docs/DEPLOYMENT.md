@@ -189,6 +189,44 @@ Live-verified on both staging and production by registering a real test
 account with a real external inbox and triggering a password-reset email -
 both arrived, logged with real ACS operation IDs.
 
+## Document storage
+
+Employee documents (passport, right-to-work, eVisa, CV, etc.) are stored in
+Azure Blob Storage, one Storage Account per environment (fully independent,
+same isolation as every other staging resource):
+
+- Production: `atmsdocsprod01` in `atms-rg`, staging: `atmsdocsstg01` in
+  `atms-staging-rg`. Both `Standard_LRS`/`StorageV2`, `allowBlobPublicAccess:
+  false`, `minimumTlsVersion: TLS1_2` - a single private `documents`
+  container per account (`publicAccess: None`).
+- Access is server-mediated only: `apps/api/src/common/services/blob-storage.service.ts`
+  streams bytes to/from the container using the account's connection string
+  (`@azure/storage-blob`'s `BlobServiceClient`). There is no client-side
+  direct-to-blob SAS upload/download and no CORS configuration on the storage
+  account - the NestJS API is the sole gatekeeper, so the self-or-admin
+  authorization check in `documents.service.ts` is the one place access is
+  enforced.
+- `AZURE_STORAGE_CONNECTION_STRING` (Container App secret
+  `azure-storage-connection-string`) and `AZURE_STORAGE_CONTAINER_NAME`
+  (plain env var, `documents`) were set directly via `az containerapp
+  secret set` / `az containerapp update`, the same way `ACS_EMAIL_CONNECTION_STRING`
+  was wired above - unlike email, though, the Storage Account itself **is**
+  declared in `infra/main.bicep`/`infra/staging.bicep` (a genuinely new
+  resource, not just a secret on one that already existed), applied directly
+  via `az storage account create` / `az storage container create` on
+  2026-09-20 for the same reason the monitoring resources were - see the
+  CAUTION note at the top of `main.bicep`.
+- **Real constraint worth knowing:** Azure Storage account names are 3-24
+  characters, lowercase alphanumeric only, globally unique - `namePrefix`
+  (`atms` / `atms-staging`) plus a `docs` suffix and a `uniqueString()` hash
+  (the pattern every other resource in this file uses) overflows that limit,
+  so the storage account names are fixed literals instead of derived from
+  `namePrefix`.
+- Verified live via `az storage blob upload`/`az storage blob download`
+  round-tripping a test file against the production container (byte-for-byte
+  identical, confirmed via `Compare-Object`) before the API was ever wired to
+  it.
+
 ## What's still open
 
 - Custom domain + managed TLS certificate isn't set up — Container Apps' default `*.azurecontainerapps.io` domain ships with HTTPS already, which satisfies NFR-003 for the demo, but a real go-live would want your own domain.

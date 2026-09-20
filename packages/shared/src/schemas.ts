@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { TaskPriority, UserRole, UserStatus } from './enums';
+import {
+  DocumentType,
+  ProfileChangeTargetType,
+  TaskPriority,
+  UserRole,
+  UserStatus,
+} from './enums';
 
 // An HTML <select> bound to an optional UUID field (e.g. "Unassigned"/"None") submits
 // an empty string, not undefined - z.string().uuid().optional() rejects that empty
@@ -30,6 +36,10 @@ const optionalNullableTrimmedString = (max: number) =>
     (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
     z.string().max(max).nullable().optional(),
   );
+const optionalNullableEmail = z.preprocess(
+  (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
+  z.string().email().nullable().optional(),
+);
 
 // An <input type="date"> submits a plain "YYYY-MM-DD" string, but dueDate expects
 // a full ISO datetime - convert to midnight UTC on that date, and treat "" as unset.
@@ -39,6 +49,37 @@ const optionalDueDate = z.preprocess(
     return /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T00:00:00.000Z` : val;
   },
   z.string().datetime().optional(),
+);
+
+// Same "YYYY-MM-DD" -> ISO-datetime conversion as optionalDueDate above, but for a
+// date of birth: required (Create User form) and optional/nullable (admin edit,
+// where a bulk-imported user may not have one yet) variants, both rejecting a
+// non-past date so a typo'd future DOB doesn't silently save.
+const requiredDateOnly = z.preprocess(
+  (val) => {
+    if (typeof val !== 'string') return val;
+    return /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T00:00:00.000Z` : val;
+  },
+  z
+    .string()
+    .datetime()
+    .refine((val) => new Date(val) < new Date(), {
+      message: 'Date of birth must be in the past',
+    }),
+);
+const optionalNullableDateOnly = z.preprocess(
+  (val) => {
+    if (typeof val !== 'string' || val.trim() === '') return null;
+    return /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T00:00:00.000Z` : val;
+  },
+  z
+    .string()
+    .datetime()
+    .refine((val) => new Date(val) < new Date(), {
+      message: 'Date of birth must be in the past',
+    })
+    .nullable()
+    .optional(),
 );
 
 // react-hook-form's { valueAsNumber: true } turns a blank <input type="number">
@@ -139,6 +180,8 @@ export const adminCreateUserSchema = z.object({
   role: z.nativeEnum(UserRole).default(UserRole.EMPLOYEE),
   departmentId: optionalUuid,
   employeeNumber: optionalTrimmedString(50),
+  dateOfBirth: requiredDateOnly,
+  jobTitle: z.string().min(1).max(150),
 });
 export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
 
@@ -167,6 +210,8 @@ export const adminUpdateUserSchema = z.object({
   status: z.nativeEnum(UserStatus).optional(),
   departmentId: optionalNullableUuid,
   employeeNumber: optionalNullableTrimmedString(50),
+  dateOfBirth: optionalNullableDateOnly,
+  jobTitle: optionalNullableTrimmedString(150),
 });
 export type AdminUpdateUserInput = z.infer<typeof adminUpdateUserSchema>;
 
@@ -209,3 +254,59 @@ export const reportFilterSchema = z.object({
   departmentId: z.string().uuid().optional(),
 });
 export type ReportFilterInput = z.infer<typeof reportFilterSchema>;
+
+// EP-012: personal-profile fields an employee fills in after account creation.
+// Used both as the employee's *proposed* payload (goes through profile-change
+// approval) and the admin's *direct* payload (applies immediately) - same shape,
+// different endpoint. All-optional since a save is typically partial.
+export const updateEmployeeProfileSchema = z.object({
+  address: optionalNullableTrimmedString(500),
+  mobilePhone: optionalNullableTrimmedString(30),
+  personalEmail: optionalNullableEmail,
+  bankAccountName: optionalNullableTrimmedString(150),
+  bankSortCode: optionalNullableTrimmedString(10),
+  bankAccountNumber: optionalNullableTrimmedString(30),
+});
+export type UpdateEmployeeProfileInput = z.infer<typeof updateEmployeeProfileSchema>;
+
+export const updateEmergencyContactSchema = z.object({
+  fullName: z.string().min(1).max(150),
+  relationship: z.string().min(1).max(100),
+  mobile: optionalNullableTrimmedString(30),
+  landline: optionalNullableTrimmedString(30),
+  email: optionalNullableEmail,
+  address: optionalNullableTrimmedString(500),
+});
+export type UpdateEmergencyContactInput = z.infer<typeof updateEmergencyContactSchema>;
+
+// EP-012: mirrors requestCorrectionSchema/decideCorrectionSchema - an employee
+// proposes a change to one of the two profile-change target types, an admin
+// reviews and decides. proposedData is validated against whichever of the two
+// shapes above matches targetType by the service layer (a discriminated union
+// here would require duplicating that same targetType check into the schema
+// for no added safety, since the server still re-validates against the
+// concrete schema before writing).
+export const requestProfileChangeSchema = z.object({
+  targetType: z.nativeEnum(ProfileChangeTargetType),
+  proposedData: z.record(z.unknown()),
+  reason: z.string().min(10).max(1000),
+});
+export type RequestProfileChangeInput = z.infer<typeof requestProfileChangeSchema>;
+
+export const decideProfileChangeSchema = z.object({
+  approve: z.boolean(),
+  comment: z.string().max(1000).optional(),
+});
+export type DecideProfileChangeInput = z.infer<typeof decideProfileChangeSchema>;
+
+export const adminDirectProfileUpdateSchema = z.object({
+  userId: z.string().uuid(),
+  targetType: z.nativeEnum(ProfileChangeTargetType),
+  data: z.record(z.unknown()),
+});
+export type AdminDirectProfileUpdateInput = z.infer<typeof adminDirectProfileUpdateSchema>;
+
+export const uploadDocumentMetadataSchema = z.object({
+  type: z.nativeEnum(DocumentType),
+});
+export type UploadDocumentMetadataInput = z.infer<typeof uploadDocumentMetadataSchema>;

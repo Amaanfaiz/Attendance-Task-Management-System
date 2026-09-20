@@ -77,6 +77,13 @@ export enum AuditAction {
   CORRECTION_REJECTED = 'CORRECTION_REJECTED',
   ADMIN_DIRECT_CORRECTION = 'ADMIN_DIRECT_CORRECTION',
   REMINDER_SENT = 'REMINDER_SENT',
+  DOCUMENT_UPLOADED = 'DOCUMENT_UPLOADED',
+  DOCUMENT_DOWNLOADED = 'DOCUMENT_DOWNLOADED',
+  DOCUMENT_DELETED = 'DOCUMENT_DELETED',
+  PROFILE_CHANGE_REQUESTED = 'PROFILE_CHANGE_REQUESTED',
+  PROFILE_CHANGE_APPROVED = 'PROFILE_CHANGE_APPROVED',
+  PROFILE_CHANGE_REJECTED = 'PROFILE_CHANGE_REJECTED',
+  ADMIN_DIRECT_PROFILE_UPDATE = 'ADMIN_DIRECT_PROFILE_UPDATE',
 }
 
 // EP-011: one row per notification a user receives, either from a real task
@@ -86,4 +93,33 @@ export enum NotificationType {
   MISSING_CLOCK_OUT = 'MISSING_CLOCK_OUT',
   LONG_RUNNING_TIMER = 'LONG_RUNNING_TIMER',
   UNALLOCATED_TIME = 'UNALLOCATED_TIME',
+}
+
+// EP-012: 10 compliance document categories an employee or admin can upload
+// against a user's record.
+export enum DocumentType {
+  PASSPORT = 'PASSPORT',
+  RIGHT_TO_WORK_SHARE_CODE = 'RIGHT_TO_WORK_SHARE_CODE',
+  EVISA = 'EVISA',
+  ADDRESS_PROOF = 'ADDRESS_PROOF',
+  BANK_DETAILS = 'BANK_DETAILS',
+  NI_NUMBER = 'NI_NUMBER',
+  CV = 'CV',
+  EDUCATION_CERTIFICATE = 'EDUCATION_CERTIFICATE',
+  DRIVING_LICENCE = 'DRIVING_LICENCE',
+  MISCELLANEOUS = 'MISCELLANEOUS',
+}
+
+// EP-012: mirrors CorrectionTargetType/CorrectionStatus - an employee's edit
+// to either of these two record types goes through the same request/approve
+// queue as attendance corrections, rather than applying immediately.
+export enum ProfileChangeTargetType {
+  EMPLOYEE_PROFILE = 'EMPLOYEE_PROFILE',
+  EMERGENCY_CONTACT = 'EMERGENCY_CONTACT',
+}
+
+export enum ProfileChangeStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
 }

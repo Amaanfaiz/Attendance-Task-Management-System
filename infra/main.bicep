@@ -46,6 +46,11 @@ var envName = '${namePrefix}-env'
 var apiAppName = '${namePrefix}-api'
 var webAppName = '${namePrefix}-web'
 var logAnalyticsName = '${namePrefix}-logs'
+// EP-012: matches the actual live name (Storage account names are 3-24 chars,
+// lowercase alphanumeric only, globally unique - a uniqueString() suffix like
+// the other resources use would overflow that limit once namePrefix + "docs"
+// is added, so this is a fixed literal instead).
+var documentsStorageAccountName = '${namePrefix}docsprod01'
 
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: acrName
@@ -91,6 +96,36 @@ resource dbFirewallAllowAzure 'Microsoft.DBforPostgreSQL/flexibleServers/firewal
 resource dbDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = {
   parent: dbServer
   name: 'atms'
+}
+
+// EP-012: document storage (passport/eVisa/CV/etc. uploads) - a private
+// container, no public blob access, server-mediated access only (the API is
+// the sole gatekeeper via BlobStorageService, no client-side SAS). Applied
+// directly via `az storage account create` / `az storage container create`
+// on 2026-09-20 (see the CAUTION note at the top of this file) - declared
+// here so the live config has a source-controlled record, same pattern as
+// the monitoring resources below.
+resource documentsStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: documentsStorageAccountName
+  location: location
+  sku: { name: 'Standard_LRS' }
+  kind: 'StorageV2'
+  properties: {
+    minimumTlsVersion: 'TLS1_2'
+    allowBlobPublicAccess: false
+    supportsHttpsTrafficOnly: true
+  }
+}
+
+resource documentsBlobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+  parent: documentsStorageAccount
+  name: 'default'
+}
+
+resource documentsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: documentsBlobService
+  name: 'documents'
+  properties: { publicAccess: 'None' }
 }
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -139,6 +174,7 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
         { name: 'database-url', value: 'postgresql://${dbAdminLogin}:${dbAdminPassword}@${dbServer.properties.fullyQualifiedDomainName}:5432/atms?sslmode=require' }
         { name: 'jwt-access-secret', value: jwtAccessSecret }
         { name: 'jwt-refresh-secret', value: jwtRefreshSecret }
+        { name: 'azure-storage-connection-string', value: 'DefaultEndpointsProtocol=https;AccountName=${documentsStorageAccount.name};AccountKey=${documentsStorageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net' }
       ]
     }
     template: {
@@ -168,6 +204,8 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
             // cookie.util.ts. 'none' forces Secure regardless of COOKIE_SECURE above.
             { name: 'COOKIE_SAME_SITE', value: 'none' }
             { name: 'WEB_ORIGIN', value: webOrigin }
+            { name: 'AZURE_STORAGE_CONNECTION_STRING', secretRef: 'azure-storage-connection-string' }
+            { name: 'AZURE_STORAGE_CONTAINER_NAME', value: 'documents' }
           ]
           probes: [
             {
