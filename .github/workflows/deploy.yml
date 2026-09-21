@@ -57,7 +57,7 @@ jobs:
       # queryable here and gets baked into the web image as the proxy target.
       - name: Look up the API Container App's public FQDN
         id: api-fqdn
-        uses: azure/CLI@v2
+        uses: azure/CLI@v3
         with:
           inlineScript: |
             fqdn=$(az containerapp show \
@@ -84,7 +84,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Update API Container App
-        uses: azure/CLI@v2
+        uses: azure/CLI@v3
         with:
           inlineScript: |
             az containerapp update \
@@ -93,7 +93,7 @@ jobs:
               --image ${{ secrets.ACR_NAME }}.azurecr.io/atms-api:${{ needs.build-and-push.outputs.image-tag }}
 
       - name: Update web Container App
-        uses: azure/CLI@v2
+        uses: azure/CLI@v3
         with:
           inlineScript: |
             az containerapp update \
@@ -108,7 +108,7 @@ jobs:
       # keeps the api container's CORS allow-list correct even if the `webOrigin`
       # Bicep parameter was a best guess at initial infra deploy time.
       - name: Sync WEB_ORIGIN to the web Container App's actual FQDN
-        uses: azure/CLI@v2
+        uses: azure/CLI@v3
         with:
           inlineScript: |
             web_fqdn=$(az containerapp show \
