@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, FileText, Trash2, Upload } from 'lucide-react';
+import { Clock, Download, FileText, Trash2, Upload } from 'lucide-react';
 import { DocumentType } from '@atms/shared';
 import { api, ApiError, exportUrl } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { Field, Input } from '@/components/ui/input';
+import { Modal } from '@/components/ui/modal';
 
 interface DocumentRow {
   id: string;
@@ -16,9 +18,10 @@ interface DocumentRow {
   fileSizeBytes: number;
   createdAt: string;
   uploadedBy: { id: string; firstName: string; surname: string };
+  pendingDeletionRequest: { id: string; reason: string; createdAt: string } | null;
 }
 
-const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   [DocumentType.PASSPORT]: 'Passport',
   [DocumentType.RIGHT_TO_WORK_SHARE_CODE]: 'Right to Work Share Code',
   [DocumentType.EVISA]: 'eVisa',
@@ -43,12 +46,18 @@ function formatFileSize(bytes: number): string {
 // shown (admin-only, even over an employee's own documents - see
 // documents.service.ts for why). Uploads apply immediately either way;
 // Documents were deliberately left outside the Personal
-// Details/Emergency Contact approval workflow.
+// Details/Emergency Contact approval workflow. An employee who can't delete
+// directly can instead request deletion, subject to admin approval - a
+// pending request replaces the delete affordance with a badge, on both this
+// view and the admin's, until an admin decides it on the Document Deletions
+// review page.
 export function DocumentsSection({ userId, canDelete }: { userId: string; canDelete: boolean }) {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [docType, setDocType] = useState<DocumentType>(DocumentType.PASSPORT);
   const [file, setFile] = useState<File | null>(null);
+  const [requestingDoc, setRequestingDoc] = useState<DocumentRow | null>(null);
+  const [reason, setReason] = useState('');
 
   const { data: documents, isLoading } = useQuery({
     queryKey: ['users', userId, 'documents'],
@@ -70,6 +79,17 @@ export function DocumentsSection({ userId, canDelete }: { userId: string; canDel
     mutationFn: (documentId: string) => api.delete(`/users/${userId}/documents/${documentId}`),
     onSuccess: invalidate,
     onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not delete this document'),
+  });
+
+  const requestDeletion = useMutation({
+    mutationFn: (documentId: string) =>
+      api.post(`/users/${userId}/documents/${documentId}/deletion-request`, { reason }),
+    onSuccess: () => {
+      invalidate();
+      setRequestingDoc(null);
+      setReason('');
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not submit this request'),
   });
 
   return (
@@ -100,13 +120,34 @@ export function DocumentsSection({ userId, canDelete }: { userId: string; canDel
                 >
                   <Download size={16} aria-hidden="true" />
                 </a>
-                {canDelete && (
+                {doc.pendingDeletionRequest ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800"
+                    title={doc.pendingDeletionRequest.reason}
+                  >
+                    <Clock size={12} aria-hidden="true" />
+                    Deletion requested
+                  </span>
+                ) : canDelete ? (
                   <button
                     type="button"
                     onClick={() => remove.mutate(doc.id)}
                     disabled={remove.isPending}
                     className="inline-flex items-center gap-1 rounded-md p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600"
                     aria-label={`Delete ${doc.fileName}`}
+                  >
+                    <Trash2 size={16} aria-hidden="true" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setReason('');
+                      setRequestingDoc(doc);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-md p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600"
+                    aria-label={`Request deletion of ${doc.fileName}`}
                   >
                     <Trash2 size={16} aria-hidden="true" />
                   </button>
@@ -156,6 +197,35 @@ export function DocumentsSection({ userId, canDelete }: { userId: string; canDel
           Upload
         </Button>
       </div>
+
+      <Modal
+        open={requestingDoc !== null}
+        onClose={() => setRequestingDoc(null)}
+        title={`Request deletion of ${requestingDoc?.fileName ?? ''}`}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            An administrator will review this request before the document is removed.
+          </p>
+          <Field
+            label="Reason for this request"
+            error={
+              reason.length > 0 && reason.length < 10
+                ? `At least 10 characters required (${reason.length}/10)`
+                : undefined
+            }
+          >
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why this document should be removed" />
+          </Field>
+          <Button
+            disabled={reason.trim().length < 10}
+            loading={requestDeletion.isPending}
+            onClick={() => requestingDoc && requestDeletion.mutate(requestingDoc.id)}
+          >
+            Submit request
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -140,6 +140,8 @@ model User {
   profileChangesRequested ProfileChangeRequest[] @relation("ProfileChangeRequester")
   profileChangesDecided   ProfileChangeRequest[] @relation("ProfileChangeDecider")
   profileChangesOwned     ProfileChangeRequest[] @relation("ProfileChangeOwner")
+  documentDeletionRequests DocumentDeletionRequest[] @relation("DocumentDeletionRequester")
+  documentDeletionsDecided DocumentDeletionRequest[] @relation("DocumentDeletionDecider")
 
   @@map("users")
 }
@@ -425,7 +427,42 @@ model Document {
   uploadedBy User  @relation("DocumentUploader", fields: [uploadedById], references: [id])
   deletedBy  User? @relation("DocumentDeleter", fields: [deletedById], references: [id])
 
+  deletionRequests DocumentDeletionRequest[]
+
   @@index([userId, type])
   @@index([userId, deletedAt])
   @@map("documents")
+}
+
+enum DocumentDeletionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Employee requests removal of their own uploaded document; admin approval
+// required (mirrors ProfileChangeRequest's request -> pending -> decide
+// shape). A dedicated status enum, not a reuse of ProfileChangeStatus,
+// matching the existing precedent that CorrectionStatus and
+// ProfileChangeStatus are already separate-but-identical enums per feature.
+model DocumentDeletionRequest {
+  id            String                 @id @default(uuid())
+  documentId    String
+  requestedById String
+  reason        String
+  status        DocumentDeletionStatus @default(PENDING)
+
+  decidedById     String?
+  decidedAt       DateTime?
+  decisionComment String?
+
+  createdAt DateTime @default(now())
+
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  requestedBy User     @relation("DocumentDeletionRequester", fields: [requestedById], references: [id])
+  decidedBy   User?    @relation("DocumentDeletionDecider", fields: [decidedById], references: [id])
+
+  @@index([status])
+  @@index([documentId, status])
+  @@map("document_deletion_requests")
 }

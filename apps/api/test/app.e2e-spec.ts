@@ -18,6 +18,13 @@ describe('Attendance & Task Management (e2e)', () => {
 
   let adminAgent: ReturnType<typeof request.agent>;
   let employeeAgent: ReturnType<typeof request.agent>;
+  // Set up once by the "Task detail is not organisation-wide visible" block
+  // below and reused by later blocks that also need a second, genuinely
+  // distinct logged-in employee - the /auth/login route is rate-limited
+  // (10/60s, auth.controller.ts) and the whole suite already runs close to
+  // that limit, so tests share this account rather than each logging in
+  // their own.
+  let secondEmployeeAgent: ReturnType<typeof request.agent>;
   let taskId: string;
 
   beforeAll(async () => {
@@ -295,7 +302,7 @@ describe('Attendance & Task Management (e2e)', () => {
 
   describe('Task detail is not organisation-wide visible (data isolation)', () => {
     it('an employee cannot view a task assigned to a different employee', async () => {
-      const otherAgent = request.agent(httpServer);
+      secondEmployeeAgent = request.agent(httpServer);
       const otherEmail = 'e2e-other-employee@atms.local';
       const otherHash = await argon2.hash('OtherPass123', {
         type: argon2.argon2id,
@@ -311,12 +318,12 @@ describe('Attendance & Task Management (e2e)', () => {
           status: 'ACTIVE',
         },
       });
-      const login = await otherAgent
+      const login = await secondEmployeeAgent
         .post('/api/v1/auth/login')
         .send({ email: otherEmail, password: 'OtherPass123' });
       expect(login.status).toBe(200);
 
-      const blocked = await otherAgent.get(`/api/v1/tasks/${taskId}`);
+      const blocked = await secondEmployeeAgent.get(`/api/v1/tasks/${taskId}`);
       expect(blocked.status).toBe(403);
 
       const allowed = await employeeAgent.get(`/api/v1/tasks/${taskId}`);
@@ -324,6 +331,152 @@ describe('Attendance & Task Management (e2e)', () => {
 
       const adminView = await adminAgent.get(`/api/v1/tasks/${taskId}`);
       expect(adminView.status).toBe(200);
+    });
+  });
+
+  describe('Document deletion requests (EP-013 follow-up)', () => {
+    let employeeId: string;
+    let documentId: string;
+    let requestId: string;
+
+    it('employee uploads a document', async () => {
+      const me = await employeeAgent.get('/api/v1/users/me');
+      employeeId = me.body.id;
+
+      const res = await employeeAgent
+        .post(`/api/v1/users/${employeeId}/documents`)
+        .field('type', 'CV')
+        .attach('file', Buffer.from('%PDF-1.4 test content'), {
+          filename: 'resume.pdf',
+          contentType: 'application/pdf',
+        });
+      expect(res.status).toBe(201);
+      documentId = res.body.id;
+    });
+
+    it('employee requests deletion of their own document', async () => {
+      const res = await employeeAgent
+        .post(`/api/v1/users/${employeeId}/documents/${documentId}/deletion-request`)
+        .send({ reason: 'Uploaded the wrong file by mistake' });
+      expect(res.status).toBe(201);
+      expect(res.body.status).toBe('PENDING');
+      requestId = res.body.id;
+    });
+
+    it('rejects a second concurrent deletion request for the same document', async () => {
+      const res = await employeeAgent
+        .post(`/api/v1/users/${employeeId}/documents/${documentId}/deletion-request`)
+        .send({ reason: 'Trying again for no real reason' });
+      expect(res.status).toBe(400);
+    });
+
+    it('a different employee cannot request deletion of someone else\'s document', async () => {
+      // Reuses the already-logged-in second employee from the "Task detail"
+      // block above rather than logging in a fresh one - /auth/login is
+      // rate-limited and the suite already runs close to that limit.
+      const res = await secondEmployeeAgent
+        .post(`/api/v1/users/${employeeId}/documents/${documentId}/deletion-request`)
+        .send({ reason: 'Not my document but trying anyway' });
+      expect(res.status).toBe(403);
+    });
+
+    it('admin sees the pending request in the review queue', async () => {
+      const res = await adminAgent.get(
+        '/api/v1/document-deletion-requests/pending',
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.some((r: { id: string }) => r.id === requestId)).toBe(
+        true,
+      );
+    });
+
+    it('admin approves the request: document is soft-deleted and both audit actions are recorded', async () => {
+      const decide = await adminAgent
+        .post(`/api/v1/document-deletion-requests/${requestId}/decide`)
+        .send({ approve: true, comment: 'Confirmed with employee' });
+      expect(decide.status).toBe(201);
+      expect(decide.body.status).toBe('APPROVED');
+
+      const download = await employeeAgent.get(
+        `/api/v1/users/${employeeId}/documents/${documentId}/download`,
+      );
+      expect(download.status).toBe(404);
+
+      const requested = await adminAgent
+        .get('/api/v1/audit')
+        .query({ action: 'DOCUMENT_DELETION_REQUESTED' });
+      expect(requested.body.length).toBeGreaterThan(0);
+      const approved = await adminAgent
+        .get('/api/v1/audit')
+        .query({ action: 'DOCUMENT_DELETION_APPROVED' });
+      expect(approved.body.length).toBeGreaterThan(0);
+      const deleted = await adminAgent
+        .get('/api/v1/audit')
+        .query({ action: 'DOCUMENT_DELETED' });
+      expect(deleted.body.length).toBeGreaterThan(0);
+    });
+
+    it('reject leaves the document untouched', async () => {
+      const upload = await employeeAgent
+        .post(`/api/v1/users/${employeeId}/documents`)
+        .field('type', 'CV')
+        .attach('file', Buffer.from('%PDF-1.4 second test'), {
+          filename: 'resume2.pdf',
+          contentType: 'application/pdf',
+        });
+      const secondDocId = upload.body.id;
+
+      const req = await employeeAgent
+        .post(`/api/v1/users/${employeeId}/documents/${secondDocId}/deletion-request`)
+        .send({ reason: 'Testing the reject path here' });
+      expect(req.status).toBe(201);
+
+      const decide = await adminAgent
+        .post(`/api/v1/document-deletion-requests/${req.body.id}/decide`)
+        .send({ approve: false, comment: 'Keep this one, still needed' });
+      expect(decide.status).toBe(201);
+      expect(decide.body.status).toBe('REJECTED');
+
+      const list = await employeeAgent.get(
+        `/api/v1/users/${employeeId}/documents`,
+      );
+      expect(
+        list.body.some((d: { id: string }) => d.id === secondDocId),
+      ).toBe(true);
+
+      const rejected = await adminAgent
+        .get('/api/v1/audit')
+        .query({ action: 'DOCUMENT_DELETION_REJECTED' });
+      expect(rejected.body.length).toBeGreaterThan(0);
+    });
+
+    it('a direct admin delete auto-resolves any pending deletion request (orphan resolution)', async () => {
+      const upload = await employeeAgent
+        .post(`/api/v1/users/${employeeId}/documents`)
+        .field('type', 'CV')
+        .attach('file', Buffer.from('%PDF-1.4 third test'), {
+          filename: 'resume3.pdf',
+          contentType: 'application/pdf',
+        });
+      const thirdDocId = upload.body.id;
+
+      const req = await employeeAgent
+        .post(`/api/v1/users/${employeeId}/documents/${thirdDocId}/deletion-request`)
+        .send({ reason: 'Requesting deletion before admin acts directly' });
+      expect(req.status).toBe(201);
+      const thirdRequestId = req.body.id;
+
+      const directDelete = await adminAgent.delete(
+        `/api/v1/users/${employeeId}/documents/${thirdDocId}`,
+      );
+      expect(directDelete.status).toBe(200);
+
+      const pending = await adminAgent.get(
+        '/api/v1/document-deletion-requests/pending',
+      );
+      expect(
+        pending.body.some((r: { id: string }) => r.id === thirdRequestId),
+      ).toBe(false);
     });
   });
 

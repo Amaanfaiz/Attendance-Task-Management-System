@@ -23,6 +23,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ProfileChangesModule } from './modules/profile-changes/profile-changes.module';
+import { DocumentDeletionRequestsModule } from './modules/document-deletion-requests/document-deletion-requests.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -58,6 +59,7 @@ import { AppController } from './app.controller';
     DashboardModule,
     NotificationsModule,
     ProfileChangesModule,
+    DocumentDeletionRequestsModule,
   ],
   controllers: [AppController],
   providers: [

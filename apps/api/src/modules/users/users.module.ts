@@ -10,6 +10,6 @@ import { DocumentsService } from './documents.service';
   imports: [AuthModule],
   controllers: [UsersController, DepartmentsController, DocumentsController],
   providers: [UsersService, DocumentsService],
-  exports: [UsersService],
+  exports: [UsersService, DocumentsService],
 })
 export class UsersModule {}

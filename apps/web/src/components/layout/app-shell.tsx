@@ -22,6 +22,7 @@ import {
   ScrollText,
   Settings,
   UserCog,
+  FileX,
   Menu,
   X,
   type LucideIcon,
@@ -47,6 +48,7 @@ const navIcons: Record<string, LucideIcon> = {
   '/admin/reports': BarChart3,
   '/admin/corrections': FileCheck,
   '/admin/profile-changes': UserCog,
+  '/admin/document-deletions': FileX,
   '/admin/audit': ScrollText,
   '/admin/settings': Settings,
 };
@@ -69,6 +71,7 @@ const adminLinks = [
   { href: '/admin/reports', label: 'Reports' },
   { href: '/admin/corrections', label: 'Correction Review' },
   { href: '/admin/profile-changes', label: 'Profile Changes' },
+  { href: '/admin/document-deletions', label: 'Document Deletions' },
   { href: '/admin/audit', label: 'Audit Log' },
   { href: '/admin/settings', label: 'Settings' },
 ];

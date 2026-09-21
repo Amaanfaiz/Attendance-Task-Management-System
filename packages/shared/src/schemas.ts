@@ -310,3 +310,14 @@ export const uploadDocumentMetadataSchema = z.object({
   type: z.nativeEnum(DocumentType),
 });
 export type UploadDocumentMetadataInput = z.infer<typeof uploadDocumentMetadataSchema>;
+
+export const requestDocumentDeletionSchema = z.object({
+  reason: z.string().min(10).max(1000),
+});
+export type RequestDocumentDeletionInput = z.infer<typeof requestDocumentDeletionSchema>;
+
+export const decideDocumentDeletionSchema = z.object({
+  approve: z.boolean(),
+  comment: z.string().max(1000).optional(),
+});
+export type DecideDocumentDeletionInput = z.infer<typeof decideDocumentDeletionSchema>;

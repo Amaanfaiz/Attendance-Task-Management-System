@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { AuditAction, DocumentType } from '@atms/shared';
+import { AuditAction, DocumentType, DocumentDeletionStatus } from '@atms/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/services/audit.service';
 import { BlobStorageService } from '../../common/services/blob-storage.service';
@@ -92,7 +92,7 @@ export class DocumentsService {
 
   async list(actorId: string, userId: string, canActAny: boolean) {
     this.assertCanAct(actorId, userId, canActAny);
-    return this.prisma.document.findMany({
+    const documents = await this.prisma.document.findMany({
       where: { userId, deletedAt: null },
       select: {
         id: true,
@@ -102,9 +102,56 @@ export class DocumentsService {
         fileSizeBytes: true,
         createdAt: true,
         uploadedBy: { select: { id: true, firstName: true, surname: true } },
+        deletionRequests: {
+          where: { status: DocumentDeletionStatus.PENDING },
+          select: { id: true, reason: true, createdAt: true },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
+    // Prisma returns the relation as an array even though at most one PENDING
+    // request can exist per document (enforced in requestDeletion below) -
+    // collapsed to a single object here so the frontend doesn't have to.
+    return documents.map(({ deletionRequests, ...doc }) => ({
+      ...doc,
+      pendingDeletionRequest: deletionRequests[0] ?? null,
+    }));
+  }
+
+  // Self-only - an admin already has direct delete and doesn't need to
+  // request. Owner is checked against the document's userId (not
+  // uploadedById), matching assertCanAct's convention - an admin may have
+  // uploaded on the employee's behalf, and the employee should still be able
+  // to request its removal.
+  async requestDeletion(actorId: string, documentId: string, reason: string) {
+    const document = await this.prisma.document.findFirst({
+      where: { id: documentId, deletedAt: null },
+    });
+    if (!document) throw new NotFoundException('Document not found');
+    if (document.userId !== actorId) {
+      throw new ForbiddenException("Not this user's documents");
+    }
+
+    const existingPending = await this.prisma.documentDeletionRequest.findFirst({
+      where: { documentId, status: DocumentDeletionStatus.PENDING },
+    });
+    if (existingPending) {
+      throw new BadRequestException(
+        'A deletion request is already pending for this document',
+      );
+    }
+
+    const request = await this.prisma.documentDeletionRequest.create({
+      data: { documentId, requestedById: actorId, reason },
+    });
+    await this.audit.record({
+      actorId,
+      action: AuditAction.DOCUMENT_DELETION_REQUESTED,
+      targetType: 'Document',
+      targetId: document.id,
+      metadata: { userId: document.userId, fileName: document.fileName },
+    });
+    return request;
   }
 
   // Every access to a passport/eVisa/NI-number scan is security-relevant, not
@@ -156,6 +203,21 @@ export class DocumentsService {
       targetId: document.id,
       before: { fileName: document.fileName, type: document.type },
       metadata: { userId: document.userId },
+    });
+
+    // A direct admin delete can bypass a pending deletion request entirely -
+    // resolve it here so it never sits PENDING forever pointing at a document
+    // that no longer exists. Harmless if decide() below also updates the same
+    // row right after (approving through the review queue calls remove()
+    // internally too) - decide() overwrites this with the real decidedById.
+    await this.prisma.documentDeletionRequest.updateMany({
+      where: { documentId, status: DocumentDeletionStatus.PENDING },
+      data: {
+        status: DocumentDeletionStatus.APPROVED,
+        decidedById: actorId,
+        decidedAt: new Date(),
+        decisionComment: 'Resolved via direct admin deletion',
+      },
     });
   }
 }

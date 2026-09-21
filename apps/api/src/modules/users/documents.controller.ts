@@ -13,7 +13,12 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
-import { UserRole, uploadDocumentMetadataSchema } from '@atms/shared';
+import {
+  UserRole,
+  uploadDocumentMetadataSchema,
+  requestDocumentDeletionSchema,
+  RequestDocumentDeletionInput,
+} from '@atms/shared';
 import { Roles } from '../../common/decorators/roles.decorator';
 import {
   CurrentUser,
@@ -90,5 +95,21 @@ export class DocumentsController {
     @Param('documentId') documentId: string,
   ) {
     return this.documentsService.remove(actorId, documentId);
+  }
+
+  // Self-only - not self-or-admin, since an admin already has the direct
+  // delete above and doesn't need to go through a request queue.
+  @Post(':documentId/deletion-request')
+  requestDeletion(
+    @CurrentUser('id') actorId: string,
+    @Param('documentId') documentId: string,
+    @Body(new ZodValidationPipe(requestDocumentDeletionSchema))
+    body: RequestDocumentDeletionInput,
+  ) {
+    return this.documentsService.requestDeletion(
+      actorId,
+      documentId,
+      body.reason,
+    );
   }
 }

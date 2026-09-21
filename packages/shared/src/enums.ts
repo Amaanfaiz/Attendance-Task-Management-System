@@ -80,6 +80,9 @@ export enum AuditAction {
   DOCUMENT_UPLOADED = 'DOCUMENT_UPLOADED',
   DOCUMENT_DOWNLOADED = 'DOCUMENT_DOWNLOADED',
   DOCUMENT_DELETED = 'DOCUMENT_DELETED',
+  DOCUMENT_DELETION_REQUESTED = 'DOCUMENT_DELETION_REQUESTED',
+  DOCUMENT_DELETION_APPROVED = 'DOCUMENT_DELETION_APPROVED',
+  DOCUMENT_DELETION_REJECTED = 'DOCUMENT_DELETION_REJECTED',
   PROFILE_CHANGE_REQUESTED = 'PROFILE_CHANGE_REQUESTED',
   PROFILE_CHANGE_APPROVED = 'PROFILE_CHANGE_APPROVED',
   PROFILE_CHANGE_REJECTED = 'PROFILE_CHANGE_REJECTED',
@@ -119,6 +122,16 @@ export enum ProfileChangeTargetType {
 }
 
 export enum ProfileChangeStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+// Employee requests removal of their own uploaded document; admin approval
+// required. A dedicated enum, not a reuse of ProfileChangeStatus, matching
+// the existing precedent that CorrectionStatus and ProfileChangeStatus are
+// already separate-but-identical enums per feature.
+export enum DocumentDeletionStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
