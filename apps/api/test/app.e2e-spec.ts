@@ -356,7 +356,9 @@ describe('Attendance & Task Management (e2e)', () => {
 
     it('employee requests deletion of their own document', async () => {
       const res = await employeeAgent
-        .post(`/api/v1/users/${employeeId}/documents/${documentId}/deletion-request`)
+        .post(
+          `/api/v1/users/${employeeId}/documents/${documentId}/deletion-request`,
+        )
         .send({ reason: 'Uploaded the wrong file by mistake' });
       expect(res.status).toBe(201);
       expect(res.body.status).toBe('PENDING');
@@ -365,17 +367,21 @@ describe('Attendance & Task Management (e2e)', () => {
 
     it('rejects a second concurrent deletion request for the same document', async () => {
       const res = await employeeAgent
-        .post(`/api/v1/users/${employeeId}/documents/${documentId}/deletion-request`)
+        .post(
+          `/api/v1/users/${employeeId}/documents/${documentId}/deletion-request`,
+        )
         .send({ reason: 'Trying again for no real reason' });
       expect(res.status).toBe(400);
     });
 
-    it('a different employee cannot request deletion of someone else\'s document', async () => {
+    it("a different employee cannot request deletion of someone else's document", async () => {
       // Reuses the already-logged-in second employee from the "Task detail"
       // block above rather than logging in a fresh one - /auth/login is
       // rate-limited and the suite already runs close to that limit.
       const res = await secondEmployeeAgent
-        .post(`/api/v1/users/${employeeId}/documents/${documentId}/deletion-request`)
+        .post(
+          `/api/v1/users/${employeeId}/documents/${documentId}/deletion-request`,
+        )
         .send({ reason: 'Not my document but trying anyway' });
       expect(res.status).toBe(403);
     });
@@ -427,7 +433,9 @@ describe('Attendance & Task Management (e2e)', () => {
       const secondDocId = upload.body.id;
 
       const req = await employeeAgent
-        .post(`/api/v1/users/${employeeId}/documents/${secondDocId}/deletion-request`)
+        .post(
+          `/api/v1/users/${employeeId}/documents/${secondDocId}/deletion-request`,
+        )
         .send({ reason: 'Testing the reject path here' });
       expect(req.status).toBe(201);
 
@@ -440,9 +448,9 @@ describe('Attendance & Task Management (e2e)', () => {
       const list = await employeeAgent.get(
         `/api/v1/users/${employeeId}/documents`,
       );
-      expect(
-        list.body.some((d: { id: string }) => d.id === secondDocId),
-      ).toBe(true);
+      expect(list.body.some((d: { id: string }) => d.id === secondDocId)).toBe(
+        true,
+      );
 
       const rejected = await adminAgent
         .get('/api/v1/audit')
@@ -461,7 +469,9 @@ describe('Attendance & Task Management (e2e)', () => {
       const thirdDocId = upload.body.id;
 
       const req = await employeeAgent
-        .post(`/api/v1/users/${employeeId}/documents/${thirdDocId}/deletion-request`)
+        .post(
+          `/api/v1/users/${employeeId}/documents/${thirdDocId}/deletion-request`,
+        )
         .send({ reason: 'Requesting deletion before admin acts directly' });
       expect(req.status).toBe(201);
       const thirdRequestId = req.body.id;

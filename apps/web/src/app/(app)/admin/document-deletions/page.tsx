@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, X, ChevronRight, FileText } from 'lucide-react';
 import { DocumentType } from '@atms/shared';
 import { api, ApiError } from '@/lib/api-client';
-import { Card, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';

@@ -55,9 +55,9 @@ export class DocumentsController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
-    const { type } = new ZodValidationPipe(uploadDocumentMetadataSchema).transform(
-      body,
-    );
+    const { type } = new ZodValidationPipe(
+      uploadDocumentMetadataSchema,
+    ).transform(body);
     return this.documentsService.upload(
       actor.id,
       id,

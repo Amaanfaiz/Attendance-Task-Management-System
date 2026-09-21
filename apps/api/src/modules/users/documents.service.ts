@@ -5,7 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { AuditAction, DocumentType, DocumentDeletionStatus } from '@atms/shared';
+import {
+  AuditAction,
+  DocumentType,
+  DocumentDeletionStatus,
+} from '@atms/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../common/services/audit.service';
 import { BlobStorageService } from '../../common/services/blob-storage.service';
@@ -132,9 +136,11 @@ export class DocumentsService {
       throw new ForbiddenException("Not this user's documents");
     }
 
-    const existingPending = await this.prisma.documentDeletionRequest.findFirst({
-      where: { documentId, status: DocumentDeletionStatus.PENDING },
-    });
+    const existingPending = await this.prisma.documentDeletionRequest.findFirst(
+      {
+        where: { documentId, status: DocumentDeletionStatus.PENDING },
+      },
+    );
     if (existingPending) {
       throw new BadRequestException(
         'A deletion request is already pending for this document',
