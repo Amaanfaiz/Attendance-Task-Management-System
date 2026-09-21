@@ -3,8 +3,36 @@ import { INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import * as argon2 from 'argon2';
+import { Readable } from 'stream';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { BlobStorageService } from '../src/common/services/blob-storage.service';
+
+// In-memory stand-in for real Azure Blob Storage - this suite tests the
+// application's own logic (ownership checks, audit trail, soft-delete),
+// not Azure connectivity, and the real BlobStorageService throws if
+// unconfigured (deliberately, see its own file) which CI correctly has no
+// credentials for. Without this override, document upload tests would only
+// pass in an environment that happens to have real Azure credentials
+// leaking in via Prisma Client's own .env auto-load - exactly the trap this
+// avoids.
+class FakeBlobStorageService {
+  private readonly blobs = new Map<string, Buffer>();
+
+  async upload(blobPath: string, buffer: Buffer): Promise<void> {
+    this.blobs.set(blobPath, buffer);
+  }
+
+  async download(blobPath: string): Promise<NodeJS.ReadableStream> {
+    const buffer = this.blobs.get(blobPath);
+    if (!buffer) throw new Error(`No fake blob at ${blobPath}`);
+    return Readable.from(buffer);
+  }
+
+  async delete(blobPath: string): Promise<void> {
+    this.blobs.delete(blobPath);
+  }
+}
 
 describe('Attendance & Task Management (e2e)', () => {
   let app: INestApplication;
@@ -30,7 +58,10 @@ describe('Attendance & Task Management (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(BlobStorageService)
+      .useClass(FakeBlobStorageService)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.use(cookieParser());
