@@ -57,23 +57,19 @@ a fresh clone running immediately:
 > These are fixed defaults baked into `prisma/seed.ts`, not real credentials for any
 > hosted environment — override them via `SEED_ADMIN_PASSWORD`/`SEED_EMPLOYEE_PASSWORD`
 > for anything beyond a local database. Staging and production are always seeded with
-> their own generated passwords (see [Live demo](#live-demo-azure) below) and never use
+> their own generated passwords (see [Live demo](#live-demo-azure---decommissioned) below) and never use
 > these values.
 
-## Live demo (Azure)
+## Live demo (Azure) - decommissioned
 
-**https://atms-web.calmmeadow-ac85e2f9.centralus.azurecontainerapps.io** (production)
-
-**https://atms-staging-web.calmmeadow-ac85e2f9.centralus.azurecontainerapps.io** (staging)
-
-Hosted per [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) on Azure Container Apps + Azure
-Database for PostgreSQL Flexible Server. Staging is a fully separate deployment (own
-database, own images, own credentials) used to verify changes before they reach
-production — see the "Staging environment" section of `docs/DEPLOYMENT.md` for how it's
-provisioned and its one architectural compromise. Both environments have their own
-dedicated admin/employee accounts, separate from the local seed defaults above — since
-this is a public repository, ask the project owner for those credentials rather than
-looking for them here.
+The Azure deployments (production and staging) were **shut down and deleted on
+2026-10-05** to stop all cloud costs. The former `*.azurecontainerapps.io` URLs no longer
+resolve and no Azure resources remain. The app runs fully locally (see the quick start
+above or `docker compose up`), and it can be redeployed from this repository by following
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md): the Bicep template in `infra/` and the
+manual-trigger deploy workflows are unchanged. A redeploy starts from an empty database;
+restore from a `pg_dump` backup if prior data is needed (see
+[`docs/BACKUP_AND_RESTORE.md`](docs/BACKUP_AND_RESTORE.md)).
 
 ## Running the full stack in Docker
 

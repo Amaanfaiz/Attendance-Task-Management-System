@@ -1,5 +1,11 @@
 # Deploying to Azure
 
+> **Status (2026-10-05): decommissioned.** The production and staging resource groups
+> (`atms-rg`, `atms-staging-rg`) were deleted, so nothing from this guide is currently
+> deployed. The procedure below remains valid for provisioning a fresh environment; it
+> will create new, empty databases and new URLs. Back up first with `pg_dump` if data
+> matters (see [`BACKUP_AND_RESTORE.md`](BACKUP_AND_RESTORE.md)).
+
 This deploys the app to Azure Container Apps with Azure Database for
 PostgreSQL, per the SRS's recommended stack (§11). The Bicep template in
 [`infra/main.bicep`](../infra/main.bicep) provisions everything except the
