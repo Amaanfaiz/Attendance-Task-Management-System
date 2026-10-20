@@ -51,7 +51,7 @@ jobs:
 
       - name: Look up the staging API Container App's public FQDN
         id: api-fqdn
-        uses: azure/CLI@v2
+        uses: azure/CLI@v3
         with:
           inlineScript: |
             fqdn=$(az containerapp show \
@@ -78,7 +78,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Update staging API Container App
-        uses: azure/CLI@v2
+        uses: azure/CLI@v3
         with:
           inlineScript: |
             az containerapp update \
@@ -87,7 +87,7 @@ jobs:
               --image ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-api:${{ needs.build-and-push.outputs.image-tag }}
 
       - name: Update staging web Container App
-        uses: azure/CLI@v2
+        uses: azure/CLI@v3
         with:
           inlineScript: |
             az containerapp update \
@@ -96,7 +96,7 @@ jobs:
               --image ${{ secrets.STAGING_ACR_NAME }}.azurecr.io/atms-web:${{ needs.build-and-push.outputs.image-tag }}
 
       - name: Sync staging WEB_ORIGIN to the web Container App's actual FQDN
-        uses: azure/CLI@v2
+        uses: azure/CLI@v3
         with:
           inlineScript: |
             web_fqdn=$(az containerapp show \
